@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    /* Figma Color Palette */
+    --primary-purple: #5c3c9f;
+    --primary-purple-light: #7e4ee6;
+    --primary-purple-brand: #8c57ff;
+    --dark-primary: #2e263d;
+    --light-bg: #f4f5fa;
+    --white: #ffffff;
+    --black: #000000;
+    --gray-light: #b2b2b2;
+    --gray-medium: #808080;
+    --gray-dark: #263238;
+    --gray-lighter: #a1a1a1;
+    --border-light: #dedede;
+    --border-lighter: #ebebeb;
+    --background-light: #e0e0e0;
+    --background-lighter: #f5f5f5;
+    --background-lightest: #fafafa;
+    --text-secondary: #455a64;
+    --accent-orange: #eb996e;
+    --accent-brown: #b78876;
+    --accent-peach: #ffbe9d;
+    --accent-brown-dark: #aa6550;
+    --error-red: #ff4c51;
+    --warning-yellow: #ffb400;
+    --info-blue: #16b1ff;
+    --text-muted: #8a8d93;
+    --success-green: #56ca00;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+  }
+
+  body {
+    background-color: #f4f5fa;
+    color: #2e263d;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .menu-item {
+    @apply flex items-center gap-3 px-4 py-2 transition-colors;
+    color: #455a64;
+  }
+
+  .menu-item:hover {
+    background-color: #f4f5fa;
+    color: #8c57ff;
+  }
+
+  .menu-item.active {
+    background: linear-gradient(to right, #8c57ff, #7e4ee6);
+    color: white;
+  }
+
+  .submenu-item {
+    @apply flex items-center gap-3 pl-12 pr-4 py-2 transition-colors;
+    color: #455a64;
+  }
+
+  .submenu-item:hover {
+    background-color: #f4f5fa;
+    color: #8c57ff;
+  }
+
+  .submenu-item.active {
+    background: linear-gradient(to right, #8c57ff, #7e4ee6);
+    color: white;
+  }
+
+  .feature-card {
+    image-rendering: crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+    -ms-interpolation-mode: nearest-neighbor;
+  }
+
+  /* Vertical Tab Styles */
+  .vertical-tab {
+    @apply px-6 py-4 text-sm font-medium transition-colors cursor-pointer;
+    color: #455a64;
+  }
+
+  .vertical-tab:hover {
+    color: #8c57ff;
+    background-color: #f4f5fa;
+  }
+
+  .vertical-tab.active {
+    background-color: #8c57ff;
+    color: white;
+  }
+}
