@@ -715,11 +715,12 @@ export function MemberReadingAnalytics() {
                   Reading Interests by Member Type
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Info
-                    size={16}
-                    className="text-[#6B7280] dark:text-[rgba(231,227,252,0.6)] cursor-help"
-                    title="Shows the distribution of reading interests across different member types"
-                  />
+                  <span title="Shows the distribution of reading interests across different member types">
+                    <Info
+                      size={16}
+                      className="text-[#6B7280] dark:text-[rgba(231,227,252,0.6)] cursor-help"
+                    />
+                  </span>
                 </div>
               </div>
               <div className="h-80">
@@ -809,11 +810,12 @@ export function MemberReadingAnalytics() {
                   Reading Duration by Book Type
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Info
-                    size={16}
-                    className="text-[#6B7280] dark:text-[rgba(231,227,252,0.6)] cursor-help"
-                    title="Shows how long members typically keep different types of books"
-                  />
+                  <span title="Shows how long members typically keep different types of books">
+                    <Info
+                      size={16}
+                      className="text-[#6B7280] dark:text-[rgba(231,227,252,0.6)] cursor-help"
+                    />
+                  </span>
                 </div>
               </div>
               <div className="h-80">
@@ -1090,11 +1092,12 @@ export function MemberReadingAnalytics() {
                   Recommendation Insights
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Info
-                    size={16}
-                    className="text-[#6B7280] dark:text-[rgba(231,227,252,0.6)] cursor-help"
-                    title="Recommendations based on member reading patterns and preferences"
-                  />
+                  <span title="Recommendations based on member reading patterns and preferences">
+                    <Info
+                      size={16}
+                      className="text-[#6B7280] dark:text-[rgba(231,227,252,0.6)] cursor-help"
+                    />
+                  </span>
                 </div>
               </div>
 

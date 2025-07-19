@@ -1,7 +1,7 @@
 "use client"
-
+// ... existing imports ...
+import { api } from '@/lib/api';
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -11,6 +11,7 @@ import { useTheme } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Logo } from "@/components/logo"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "sonner"
 
 type UserRole = "admin" | "teacher" | "parent" | "student" | "alumni"
 
@@ -22,18 +23,53 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { theme } = useTheme()
   const router = useRouter()
+ 
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+// Then in handleLogin:
 
-    // Simulate login process
-    setTimeout(() => {
-      // Store user role in localStorage for sidebar configuration
-      localStorage.setItem("userRole", activeRole)
-      router.push("/otp-verification")
-    }, 1000)
+// In your handleLogin function:
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+
+  try {
+    const response = await api.post('/auth/login', {
+      email,
+      password
+    });
+
+    // Store in localStorage
+    localStorage.setItem('accessToken', response.accessToken);
+    localStorage.setItem('userRole', response.role);
+    localStorage.setItem('tenantId', response.tenantId);
+    if (response.branchId) {
+      localStorage.setItem('branchId', response.branchId);
+    }
+
+    // Also set as HTTP-only cookie
+    document.cookie = `accessToken=${response.accessToken}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax; Secure`;
+
+    // Verify role
+    if (response.role !== activeRole) {
+      throw new Error(`Please login using the ${response.role} tab`);
+    }
+    const roleRoutes = {
+      admin: './onboarding',
+      teacher: '/teacher/dashboard',
+      parent: '/parent/dashboard',
+      student: '/student/dashboard',
+      alumni: '/alumni/dashboard'
+    };
+
+
+    // Redirect
+    router.push(roleRoutes[response.role]);
+  } catch (error) {
+    toast.error(error.message || 'Login failed');
+  } finally {
+    setIsLoading(false);
   }
+};
 
   const getRoleDisplayName = (role: UserRole) => {
     const roleNames = {

@@ -66,7 +66,7 @@ export default function OTPVerificationPage() {
     // Simulate OTP verification
     setTimeout(() => {
       const userRole = localStorage.getItem("userRole") || "admin"
-      router.push(`/dashboard/${userRole}`)
+      router.push(`../dashboard/${userRole}`)
     }, 1000)
   }
 

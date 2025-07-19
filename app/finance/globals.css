@@ -1,0 +1,339 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 228 10% 97%; /* #F4F5FA */
+    --foreground: 260 25% 19% / 0.9; /* #2E263D 90% opacity */
+    --foreground-secondary: 260 25% 19% / 0.7; /* #2E263D 70% opacity */
+
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 260 25% 19% / 0.9; /* #2E263D 90% opacity */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 260 25% 19% / 0.9;
+
+    --primary: 266 100% 67%; /* #8C57FF */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary-light: 266 100% 67% / 0.16; /* #8C57FF 16% opacity */
+
+    --secondary: 220 3% 56%; /* #8A8D93 */
+    --secondary-foreground: 260 25% 19% / 0.9; /* #2E263D 90% opacity */
+    --secondary-light: 220 3% 56% / 0.16; /* #8A8D93 16% opacity */
+
+    --muted: 246 6% 97%;
+    --muted-foreground: 260 25% 19% / 0.7;
+
+    --accent: 246 6% 97%;
+    --accent-foreground: 260 25% 19% / 0.9;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 3% 56% / 0.2; /* #8A8D93 20% opacity */
+    --input: 220 3% 56% / 0.2;
+    --ring: 266 100% 67%;
+
+    --radius: 0.5rem;
+
+    --table-header: 228 19% 97%; /* #F6F7FB */
+    --divider: 220 3% 56% / 0.2; /* #8A8D93 20% opacity */
+
+    /* Status colors */
+    --success: 135 100% 40%; /* #56CA00 */
+    --success-light: 135 100% 40% / 0.16; /* #56CA00 16% opacity */
+
+    --warning: 42 100% 50%; /* #FFB400 */
+    --warning-light: 42 100% 50% / 0.16; /* #FFB400 16% opacity */
+
+    --error: 359 100% 65%; /* #FF4C51 */
+    --error-light: 359 100% 65% / 0.16; /* #FF4C51 16% opacity */
+
+    --info: 199 100% 55%; /* #16B1FF */
+    --info-light: 199 100% 55% / 0.16; /* #16B1FF 16% opacity */
+  }
+
+  .dark {
+    --background: 257 22% 20%; /* #28243D 100% opacity */
+    --foreground: 253 76% 94% / 0.7; /* #E7E3FC 70% opacity */
+    --foreground-secondary: 253 76% 94% / 0.7; /* #E7E3FC 70% opacity */
+
+    --card: 252 25% 24%; /* #312D4B 100% opacity */
+    --card-foreground: 253 76% 94% / 0.7; /* #E7E3FC 70% opacity */
+
+    --popover: 252 25% 24%; /* #312D4B */
+    --popover-foreground: 253 76% 94% / 0.7;
+
+    --primary: 266 100% 67%; /* #8C57FF */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --primary-light: 266 100% 67% / 0.16; /* #8C57FF 16% opacity */
+
+    --secondary: 220 3% 56%; /* #8A8D93 */
+    --secondary-foreground: 253 76% 94% / 0.7; /* #E7E3FC 70% opacity */
+    --secondary-light: 220 3% 56% / 0.16; /* #8A8D93 16% opacity */
+
+    --muted: 252 25% 29%;
+    --muted-foreground: 253 76% 94% / 0.7;
+
+    --accent: 252 25% 29%;
+    --accent-foreground: 253 76% 94% / 0.7;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 3% 56% / 0.2; /* #8A8D93 20% opacity */
+    --input: 252 25% 29%;
+    --ring: 266 100% 67%;
+
+    --table-header: 251 18% 28%; /* #3D3759 */
+    --divider: 220 3% 56% / 0.2; /* #8A8D93 20% opacity */
+
+    /* Status colors */
+    --success: 135 100% 40%; /* #56CA00 */
+    --success-light: 135 100% 40% / 0.16; /* #56CA00 16% opacity */
+
+    --warning: 42 100% 50%; /* #FFB400 */
+    --warning-light: 42 100% 50% / 0.16; /* #FFB400 16% opacity */
+
+    --error: 359 100% 65%; /* #FF4C51 */
+    --error-light: 359 100% 65% / 0.16; /* #FF4C51 16% opacity */
+
+    --info: 199 100% 55%; /* #16B1FF */
+    --info-light: 199 100% 55% / 0.16; /* #16B1FF 16% opacity */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+}
+
+@layer components {
+  /* Status badges */
+  .status-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* Status badges with the new color palette */
+  .status-badge-success {
+    background-color: hsl(var(--success-light));
+    color: hsl(var(--success));
+  }
+
+  .status-badge-warning {
+    background-color: hsl(var(--warning-light));
+    color: hsl(var(--warning));
+  }
+
+  .status-badge-error {
+    background-color: hsl(var(--error-light));
+    color: hsl(var(--error));
+  }
+
+  .status-badge-info {
+    background-color: hsl(var(--info-light));
+    color: hsl(var(--info));
+  }
+
+  .status-badge-primary {
+    background-color: hsl(var(--primary-light));
+    color: hsl(var(--primary));
+  }
+
+  .status-badge-secondary {
+    background-color: hsl(var(--secondary-light));
+    color: hsl(var(--secondary));
+  }
+
+  /* Card styles */
+  .dashboard-card {
+    @apply rounded-xl border bg-card p-6 shadow-sm transition-all hover:shadow-md;
+  }
+
+  .stat-card {
+    @apply flex flex-col space-y-2;
+  }
+
+  .stat-card-value {
+    @apply text-3xl font-bold tracking-tight;
+  }
+
+  .stat-card-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .stat-card-trend {
+    @apply flex items-center text-xs font-medium;
+  }
+
+  .stat-card-trend-up {
+    color: hsl(var(--success));
+  }
+
+  .stat-card-trend-down {
+    color: hsl(var(--error));
+  }
+
+  /* Table styles with the new color palette */
+  .data-table th {
+    @apply h-12 px-4 text-left align-middle font-medium bg-[hsl(var(--table-header))];
+  }
+
+  .data-table tr {
+    @apply border-b border-[hsl(var(--divider))] transition-colors hover:bg-muted/50;
+  }
+
+  .data-table td {
+    @apply p-4 align-middle;
+  }
+
+  /* Form styles */
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-label {
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+
+  /* Currency formatting */
+  .currency {
+    @apply font-mono tabular-nums;
+  }
+
+  /* Mobile sidebar */
+  .mobile-sidebar {
+    @apply fixed inset-0 z-50 flex h-[100dvh] w-full flex-col bg-background transition-transform lg:hidden;
+  }
+
+  .mobile-sidebar[data-state="open"] {
+    @apply translate-x-0;
+  }
+
+  .mobile-sidebar[data-state="closed"] {
+    @apply -translate-x-full;
+  }
+}
+
+/* Animations */
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Receipt Styles */
+.landscape-receipt {
+  width: 100%;
+  page-break-inside: avoid;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .landscape-receipt,
+  .landscape-receipt * {
+    visibility: visible;
+  }
+
+  .landscape-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  @page {
+    size: landscape;
+    margin: 0.5cm;
+  }
+}
+
+.tabs-list {
+  background-color: #f5f5f5;
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+}
+
+.dark .tabs-list {
+  background-color: #333;
+}
+
+.tabs-trigger {
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tabs-trigger[data-state="active"] {
+  background-color: #8c57ff;
+  color: white;
+}
+
+.tabs-trigger:hover:not([data-state="active"]) {
+  background-color: rgba(140, 87, 255, 0.16);
+}

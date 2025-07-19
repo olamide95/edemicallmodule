@@ -54,8 +54,15 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
         {
           title: "Admissions",
           icon: <Users size={20} />,
-          path: "/admissions",
-          expanded: false,
+          expanded: true,
+          submenu: [
+            { title: "Dashboard", icon: <Circle size={8} />, path: "/admission/dashboard" },
+            {title: "Enrollment", icon: <Circle size={8} />, path: "/admission/enrollment"},
+            { title: "Map ID", icon: <Circle size={8} />, path: "/admission/map" },
+            { title: "Settings", icon: <Circle size={8} />, path: "/admission/settings" },
+            { title: "Students", icon: <Circle size={8} />, path: "/admission/students" },
+           
+          ],
         },
         {
           title: "Academics",
@@ -86,10 +93,24 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
         },
         {
           title: "School Bus",
-          icon: <Bus size={20} />,
-          path: "/school-bus",
-          expanded: false,
-        },
+         
+      icon: <Bus size={20} />,
+      path: "/schoolbus/admin",
+      expanded: true,
+      submenu: [
+        { title: "Dashboard", icon: <Circle size={8} />, path: "/schoolbus/admin" },
+        { title: "Buses", icon: <Circle size={8} />, path: "/schoolbus/admin/buses" },
+        { title: "Staff", icon: <Circle size={8} />, path: "/schoolbus/admin/staff" },
+        { title: "Routes & Stops", icon: <Circle size={8} />, path: "/schoolbus/admin/routes" },
+        { title: "Fees", icon: <Circle size={8} />, path: "/schoolbus/admin/fees" },
+        { title: "Enrollments", icon: <Circle size={8} />, path: "/schoolbus/admin/enrollments" },
+        { title: "Bus Tracking", icon: <Circle size={8} />, path: "/schoolbus/admin/tracking" },
+        { title: "Pickup & Dropoff", icon: <Circle size={8} />, path: "/schoolbus/admin/register" },
+        { title: "Authorized Agents", icon: <Circle size={8} />, path: "/schoolbus/admin/agents" },
+        { title: "Notifications", icon: <Circle size={8} />, path: "/schoolbus/admin/notifications" },
+        { title: "Settings", icon: <Circle size={8} />, path: "/schoolbus/admin/settings" },
+      ],
+    },
         {
           title: "Communication",
           icon: <MessageSquare size={20} />,
@@ -99,14 +120,47 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
         {
           title: "Finance",
           icon: <DollarSign size={20} />,
-          path: "/finance",
-          expanded: false,
+          path: "/finance/admin",
+          expanded: true,
+          submenu: [
+            { title: "Dashboard", icon: <Circle size={8} />, path: "/finance/admin/dashboard" },
+            { title: "Collections", icon: <Circle size={8} />, path: "/finance/admin/collections" },
+            { title: "Credits", icon: <Circle size={8} />, path: "/finance/admin/credits" },
+            { title: "Discounts", icon: <Circle size={8} />, path: "/finance/admin/discounts" },
+            { title: "Fee management", icon: <Circle size={8} />, path: "/finance/admin/fee-management" },
+            { title: "Fines", icon: <Circle size={8} />, path: "/finance/admin/fines" },
+            { title: "Refferral", icon: <Circle size={8} />, path: "/finance/admin/referral" },
+            { title: "Reports", icon: <Circle size={8} />, path: "/finance/admin/reports" },
+            { title: "Statement", icon: <Circle size={8} />, path: "/finance/admin/statements" },
+            { title: "Write-off", icon: <Circle size={8} />, path: "/finance/admin/write-off" },
+            { title: "Setting", icon: <Circle size={8} />, path: "/finance/admin/settings" },
+            { title: "Chat", icon: <Circle size={8} />, path: "/finance/admin/chat" },
+          ],
         },
         {
           title: "Accounting",
           icon: <Calculator size={20} />,
           path: "/accounting",
           expanded: false,
+        },
+
+         {
+          title: "Extracurricullar Activities",
+          icon: <Briefcase size={20} />,
+          path: "/extracurricular/admin",
+          expanded: true,
+          submenu: [
+            { title: "Dashboard", icon: <Circle size={8} />, path: "/extracurricular/admin/dashboard" },
+            { title: "Accounting", icon: <Circle size={8} />, path: "/extracurricular/admin/accounting" },
+            { title: "Change clubs", icon: <Circle size={8} />, path: "/extracurricular/admin/change-club" },
+            { title: "Clubs", icon: <Circle size={8} />, path: "/extracurricular/admin/clubs" },
+            { title: "Attendance", icon: <Circle size={8} />, path: "/extracurricular/admin/attendance" },
+            { title: "Enrollments", icon: <Circle size={8} />, path: "/extracurricular/admin/enrollments" },
+            { title: "Unenrollments", icon: <Circle size={8} />, path: "/extracurricular/admin/unenrollments" },
+            { title: "Reports", icon: <Circle size={8} />, path: "/extracurricular/admin/reports" },
+            { title: "Performance", icon: <Circle size={8} />, path: "/extracurricular/admin/performance" },
+            { title: "Setting", icon: <Circle size={8} />, path: "/extracurricular/admin/settings" },
+          ],
         },
         {
           title: "HRMS",
@@ -231,7 +285,8 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
             { title: "LMS", icon: <Circle size={8} />, path: "/academics/lms" },
             { title: "School Pickup", icon: <Circle size={8} />, path: "/academics/school-pickup" },
           ],
-        },
+        },  
+
         {
           title: "eCommerce",
           icon: <ShoppingCart size={20} />,
@@ -296,6 +351,18 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
 
     case "parent":
       return [
+
+         {
+          title: "Admissions",
+          icon: <Users size={20} />,
+          expanded: true,
+          submenu: [
+            { title: "Admission", icon: <Circle size={8} />, path: "/admission/parent-portal" },
+           
+          ],
+        },
+
+
         {
           title: "Academics",
           icon: <GraduationCap size={20} />,
@@ -314,24 +381,62 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
           path: "/ptm",
           expanded: false,
         },
-        {
+       {
           title: "Finance",
           icon: <DollarSign size={20} />,
-          path: "/finance",
-          expanded: false,
+          path: "/finance/parent",
+          expanded: true,
+          submenu: [
+            { title: "Dashboard", icon: <Circle size={8} />, path: "/finance/parent/dashboard" },
+            { title: "Pay Fees", icon: <Circle size={8} />, path: "/finance/parent/pay-fees" },
+            { title: "Extracurricullar", icon: <Circle size={8} />, path: "/finance/parent/extracurricular" },
+            { title: "Payment History", icon: <Circle size={8} />, path: "/finance/parent/payment-history" },
+            { title: "Refferral", icon: <Circle size={8} />, path: "/finance/parent/referral" },
+            { title: "Statement", icon: <Circle size={8} />, path: "/finance/parent/statements" },
+            { title: "Setting", icon: <Circle size={8} />, path: "/finance/parent/settings" },
+            { title: "Chat", icon: <Circle size={8} />, path: "/finance/parent/chat" },
+          ],
         },
+       
         {
           title: "School Bus",
-          icon: <Bus size={20} />,
-          path: "/school-bus",
-          expanded: false,
-        },
+        
+    icon: <Bus size={20} />,
+    path: "schoolbus/parent",
+    expanded: true,
+    submenu: [
+      { title: "Dashboard", icon: <Circle size={8} />, path: "/schoolbus/parent" },
+      { title: "My Children", icon: <Circle size={8} />, path: "/schoolbus/parent/children" },
+      { title: "Bus Tracking", icon: <Circle size={8} />, path: "/schoolbus/parent/tracking" },
+      { title: "Pickup & Dropoff Agents", icon: <Circle size={8} />, path: "/schoolbus/parent/agents" },
+      { title: "Enrollment", icon: <Circle size={8} />, path: "/schoolbus/parent/enrollment" },
+      { title: "Routes & Stops", icon: <Circle size={8} />, path: "/schoolbus/parent/routes" },
+      { title: "Payments", icon: <Circle size={8} />, path: "/schoolbus/parent/payments" },
+      { title: "Notifications", icon: <Circle size={8} />, path: "/schoolbus/parent/notifications" },
+      { title: "Settings", icon: <Circle size={8} />, path: "/schoolbus/parent/settings" },
+    ],
+  },
+  // You can add other parent categories here if needed
+
         {
           title: "Communication",
           icon: <MessageSquare size={20} />,
           path: "/communication",
           expanded: false,
         },
+         {
+          title: "Extracurricullar Activities",
+          icon: <Briefcase size={20} />,
+          path: "/extracurricular/parent",
+          expanded: true,
+          submenu: [
+            { title: "Dashboard", icon: <Circle size={8} />, path: "/extracurricular/parent/dashboard" },
+            { title: "Change clubs", icon: <Circle size={8} />, path: "/extracurricular/parent/club-change" },
+            { title: "Enrollments", icon: <Circle size={8} />, path: "/extracurricular/parent/enrollments" },
+            { title: "Performance", icon: <Circle size={8} />, path: "/extracurricular/parent/performance" },
+          ],
+        },
+        
         {
           title: "Visitors Management",
           icon: <VisitorsIcon />,
@@ -354,6 +459,15 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
 
     case "student":
       return [
+         {
+          title: "Admissions",
+          icon: <Users size={20} />,
+          expanded: true,
+          submenu: [
+            { title: "Admission", icon: <Circle size={8} />, path: "/admission/guest-portal" },
+           
+          ],
+        },
         {
           title: "Academics",
           icon: <GraduationCap size={20} />,
@@ -379,6 +493,7 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
           path: "/communication",
           expanded: false,
         },
+           
         {
           title: "Library Management",
           icon: <LibraryIcon />,
@@ -409,7 +524,7 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
         },
         {
           title: "Events & Calendar",
-          icon: <Calendar size={20} />,
+          icon: <BookOpen size={20} />,
           path: "/events-calendar",
           expanded: false,
         },

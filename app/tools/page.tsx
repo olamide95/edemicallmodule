@@ -18,7 +18,7 @@ export default function ToolsPage() {
     {
       title: "Form Builder",
       image: "/form-builder.png",
-      href: "/tools/form-builder",
+      href: "/tools/form",
       description: "Create dynamic forms with drag-and-drop functionality for data collection and user input.",
     },
     {

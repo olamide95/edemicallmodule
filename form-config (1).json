@@ -1,0 +1,860 @@
+{
+  "meta": {
+    "createdAt": "2025-07-09T11:36:54.984Z"
+  },
+  "tabs": [
+    {
+      "id": "tab1",
+      "title": "Bio Data",
+      "orientation": "horizontal",
+      "sections": [
+        {
+          "id": "section1",
+          "title": "Bio Data",
+          "isCollapsed": false,
+          "columns": [
+            {
+              "id": "column1",
+              "fields": [
+                {
+                  "id": "admissionNumber",
+                  "name": "admissionNumber",
+                  "label": "Admission Number",
+                  "isRequired": true,
+                  "isReadOnly": true,
+                  "isHidden": false,
+                  "defaultValue": "ADM-2025-001",
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "lastName",
+                  "name": "lastName",
+                  "label": "Last Name",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "middleName",
+                  "name": "middleName",
+                  "label": "Middle Name",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "dateOfBirth",
+                  "name": "dateOfBirth",
+                  "label": "Date of Birth",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "gender",
+                  "name": "gender",
+                  "label": "Gender",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Male",
+                    "Female",
+                    "Other"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "age",
+                  "name": "age",
+                  "label": "Age",
+                  "isRequired": false,
+                  "isReadOnly": true,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "section",
+                  "name": "section",
+                  "label": "Section",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "A",
+                    "B",
+                    "C",
+                    "D"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "religion",
+                  "name": "religion",
+                  "label": "Religion",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Christianity",
+                    "Islam",
+                    "Hinduism",
+                    "Buddhism",
+                    "Other"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            },
+            {
+              "id": "f8a6d3fb-c64c-4d8e-ad5a-19985f11ed31",
+              "fields": [
+                {
+                  "id": "class",
+                  "name": "class",
+                  "label": "Class",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Nursery",
+                    "KG1",
+                    "KG2",
+                    "Grade 1",
+                    "Grade 2",
+                    "Grade 3",
+                    "Grade 4",
+                    "Grade 5",
+                    "Grade 6",
+                    "Grade 7",
+                    "Grade 8",
+                    "Grade 9",
+                    "Grade 10",
+                    "Grade 11",
+                    "Grade 12"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "yearOfAdmission",
+                  "name": "yearOfAdmission",
+                  "label": "Year of Admission",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "2025",
+                    "2024",
+                    "2023",
+                    "2022",
+                    "2021",
+                    "2020"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "enrollmentDate",
+                  "name": "enrollmentDate",
+                  "label": "Enrollment Date",
+                  "isRequired": true,
+                  "isReadOnly": true,
+                  "isHidden": false,
+                  "defaultValue": "2025-06-27",
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "disability",
+                  "name": "disability",
+                  "label": "Disability (if any)",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "None",
+                    "Visual",
+                    "Hearing",
+                    "Physical",
+                    "Learning",
+                    "Other"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "firstName",
+                  "name": "firstName",
+                  "label": "First Name",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "specialNeeds",
+                  "name": "specialNeeds",
+                  "label": "Special Educational Needs",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Yes",
+                    "No"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "previousSchool",
+                  "name": "previousSchool",
+                  "label": "Previous School Attended",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "175f0537-f3b2-49c0-8bb8-dfb60b293ceb",
+                  "name": "image",
+                  "label": "Student Photo",
+                  "type": "image",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "3a9f4151-93b3-4848-832c-b2bb88dc5113",
+          "title": "Address Section",
+          "isCollapsed": false,
+          "columns": [
+            {
+              "id": "3b359690-1470-4d0b-96aa-e4fc59a35a8d",
+              "fields": [
+                {
+                  "id": "homeLanguage",
+                  "name": "homeLanguage",
+                  "label": "Home Language",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "state",
+                  "name": "state",
+                  "label": "State",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "postalCode",
+                  "name": "postalCode",
+                  "label": "Postal/Zip Code",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "lga",
+                  "name": "lga",
+                  "label": "Local Government Area",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "nationality",
+                  "name": "nationality",
+                  "label": "Nationality",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Nigeria",
+                    "United States",
+                    "United Kingdom",
+                    "Canada",
+                    "Other"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            },
+            {
+              "id": "29531001-973c-457f-8f1a-a5ea783ea691",
+              "fields": [
+                {
+                  "id": "city",
+                  "name": "city",
+                  "label": "City",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "country",
+                  "name": "country",
+                  "label": "Country",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Nigeria",
+                    "United States",
+                    "United Kingdom",
+                    "Canada",
+                    "Other"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "address",
+                  "name": "address",
+                  "label": "Residential Address",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "stateOfOrigin",
+                  "name": "stateOfOrigin",
+                  "label": "State of Origin",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tab2",
+      "title": "Parent/Guardian Information",
+      "orientation": "horizontal",
+      "sections": [
+        {
+          "id": "section2",
+          "title": "Parent/Guardian Information",
+          "isCollapsed": false,
+          "columns": [
+            {
+              "id": "column2",
+              "fields": [
+                {
+                  "id": "fatherName",
+                  "name": "fatherName",
+                  "label": "Father's Full Name",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "fatherEmail",
+                  "name": "fatherEmail",
+                  "label": "Father's Email",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "fatherOfficeAddress",
+                  "name": "fatherOfficeAddress",
+                  "label": "Father's Office Address",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "motherName",
+                  "name": "motherName",
+                  "label": "Mother's Full Name",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "motherEmail",
+                  "name": "motherEmail",
+                  "label": "Mother's Email",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "motherOfficeAddress",
+                  "name": "motherOfficeAddress",
+                  "label": "Mother's Office Address",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "guardianName",
+                  "name": "guardianName",
+                  "label": "Guardian's Full Name",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "guardianEmail",
+                  "name": "guardianEmail",
+                  "label": "Guardian's Email",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "emergencyName",
+                  "name": "emergencyName",
+                  "label": "Emergency Contact Name",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "emergencyPhone",
+                  "name": "emergencyPhone",
+                  "label": "Emergency Phone",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "guardianRelationship",
+                  "name": "guardianRelationship",
+                  "label": "Relationship to Student",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Uncle",
+                    "Aunt",
+                    "Grandparent",
+                    "Other"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            },
+            {
+              "id": "fe6b7415-c833-44b2-a59a-1a412aded568",
+              "fields": [
+                {
+                  "id": "fatherPhone",
+                  "name": "fatherPhone",
+                  "label": "Father's Phone",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "fatherOccupation",
+                  "name": "fatherOccupation",
+                  "label": "Father's Occupation",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "fatherEducation",
+                  "name": "fatherEducation",
+                  "label": "Father's Education Level",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Primary",
+                    "Secondary",
+                    "Diploma",
+                    "Degree",
+                    "Postgraduate"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "motherPhone",
+                  "name": "motherPhone",
+                  "label": "Mother's Phone",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "motherOccupation",
+                  "name": "motherOccupation",
+                  "label": "Mother's Occupation",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "motherEducation",
+                  "name": "motherEducation",
+                  "label": "Mother's Education Level",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Primary",
+                    "Secondary",
+                    "Diploma",
+                    "Degree",
+                    "Postgraduate"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "guardianPhone",
+                  "name": "guardianPhone",
+                  "label": "Guardian's Phone",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "guardianOccupation",
+                  "name": "guardianOccupation",
+                  "label": "Guardian's Occupation",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "emergencyRelationship",
+                  "name": "emergencyRelationship",
+                  "label": "Relationship to Student",
+                  "isRequired": true,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "emergencyPhone2",
+                  "name": "emergencyPhone2",
+                  "label": "Alternate Emergency Phone",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tab3",
+      "title": "Medical Information",
+      "orientation": "horizontal",
+      "sections": [
+        {
+          "id": "section3",
+          "title": "Medical Information",
+          "isCollapsed": false,
+          "columns": [
+            {
+              "id": "column3",
+              "fields": [
+                {
+                  "id": "bloodGroup",
+                  "name": "bloodGroup",
+                  "label": "Blood Group",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "A+",
+                    "A-",
+                    "B+",
+                    "B-",
+                    "AB+",
+                    "AB-",
+                    "O+",
+                    "O-"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "knownAllergies",
+                  "name": "knownAllergies",
+                  "label": "Known Allergies",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "regularMedications",
+                  "name": "regularMedications",
+                  "label": "Regular Medications",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "doctorPhone",
+                  "name": "doctorPhone",
+                  "label": "Doctor's Phone",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "immunizationStatus",
+                  "name": "immunizationStatus",
+                  "label": "Immunization Up-to-date",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "Yes",
+                    "No"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "specialDiet",
+                  "name": "specialDiet",
+                  "label": "Special Dietary Needs",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "psychologicalConcerns",
+                  "name": "psychologicalConcerns",
+                  "label": "Psychological Concerns",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            },
+            {
+              "id": "7217c56f-fbc0-4094-ad10-39c1e4882621",
+              "fields": [
+                {
+                  "id": "genotype",
+                  "name": "genotype",
+                  "label": "Genotype",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "options": [
+                    "AA",
+                    "AS",
+                    "SS",
+                    "SC",
+                    "CC"
+                  ],
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "chronicConditions",
+                  "name": "chronicConditions",
+                  "label": "Chronic Medical Conditions",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "doctorName",
+                  "name": "doctorName",
+                  "label": "Family Doctor Name",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "hospitalPreference",
+                  "name": "hospitalPreference",
+                  "label": "Preferred Hospital",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "lastPhysicalExam",
+                  "name": "lastPhysicalExam",
+                  "label": "Last Physical Exam Date",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "physicalLimitations",
+                  "name": "physicalLimitations",
+                  "label": "Physical Limitations",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "paymentGateways": [],
+  "documentStates": []
+}

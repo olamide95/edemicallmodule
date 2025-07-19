@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Edemics - Academic Module",
   description: "Academic management system for educational institutions",
-    generator: 'v0.dev'
+    generator: 'Edemics'
 }
 
 export default function RootLayout({
