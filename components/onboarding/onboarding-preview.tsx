@@ -168,8 +168,8 @@ function OrganogramPreview({ data }: { data: any }) {
   return (
     <div className="p-6 bg-light-bg dark:bg-dark-bg rounded-md border border-divider">
       <div className="mb-6">
-        <OrganogramVisualization departments={data.departments || []} />
-      </div>
+        <OrganogramVisualization departments={data.departments} />
+      </div>.  
 
       <div className="flex items-center gap-4 mb-4">
         <div className="bg-primary-light rounded-full p-3">

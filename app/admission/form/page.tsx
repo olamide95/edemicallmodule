@@ -1,13 +1,13 @@
 "use client";
 
-import { FormBuilder, ThemeProvider } from 'edemicformbuilder';
 import { useState } from 'react';
+import  { FormBuilder, ThemeProvider } from "edemicformbuilder";
 import formConfig from "./student-registration.json";
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar } from "@/components/sidebar"; 
 import { Header } from "@/components/header";
 import Image from "next/image"; 
 import { ChevronRight } from "lucide-react";
-import type { DocTypeState } from 'edemicformbuilder'; 
+import type { DocTypeState } from 'edemicformbuilder' 
 import './globals.css';   
 
 export default function AdmissionFormPage() {

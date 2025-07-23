@@ -153,10 +153,7 @@ export function OrganogramForm() {
       </div>
 
       {/* Organogram Visualization */}
-      <div className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider mb-6">
-        <h3 className="text-lg font-medium mb-4">Current Organogram</h3>
-        <OrganogramVisualization departments={departments} />
-      </div>
+     
 
       {departments.map((department, index) => (
         <div key={index} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">

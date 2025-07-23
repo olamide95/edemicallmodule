@@ -26,11 +26,17 @@ export function SchoolDetailsForm() {
   // Load initial data from backend
   useEffect(() => {
    // In SchoolDetailsForm.tsx
+// In SchoolDetailsForm.tsx
 const fetchSchoolDetails = async () => {
   try {
-    // Get school by tenant
+    console.log('Fetching school details for current tenant...');
+    
     const response = await api.get('/school-setup/school');
+    console.log('API Response:', response); // Log full response
+    
     if (response.success && response.data) {
+      console.log('Found school data for tenant:', response.data.tenantId);
+      
       setLocalSchoolDetails({
         name: response.data.name || "",
         address: response.data.address || "",
@@ -40,12 +46,26 @@ const fetchSchoolDetails = async () => {
         country: response.data.country || "",
         logo: response.data.logo || null,
       });
+      
       if (response.data.logo) {
         setPreviewLogo(response.data.logo);
       }
       updateSchoolData(response.data);
+    } else {
+      console.log('No school data found for tenant');
+      // Initialize with empty data
+      setLocalSchoolDetails({
+        name: "",
+        address: "",
+        email: "",
+        phone: "",
+        academicYear: "",
+        country: "",
+        logo: null,
+      });
     }
   } catch (error) {
+    console.error('Error fetching school details:', error);
     toast({
       title: "Error",
       description: "Failed to fetch school details",
@@ -59,7 +79,7 @@ const handleBlur = async () => {
   
   try {
     setIsLoading(true);
-    const response = await api.put('/school-setup/school', localSchoolDetails);
+    const response = await api.post('/school-setup/school', localSchoolDetails);
     if (response.success) {
       toast({
         title: "Success",
@@ -93,7 +113,7 @@ const handleBlur = async () => {
   
   try {
     setIsLoading(true);
-    const response = await api.put('/school-setup/school', localSchoolDetails);
+    const response = await api.post('/school-setup/school', localSchoolDetails);
     if (response.success) {
       toast({
         title: "Success",
@@ -399,3 +419,8 @@ const handleBlur = async () => {
     </div>
   )
 }
+
+
+
+
+

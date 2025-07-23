@@ -54,178 +54,32 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
   const currentStepIndex = steps.findIndex((step) => pathname.includes(step.id))
   const [animatingToIndex, setAnimatingToIndex] = useState<number | null>(null)
 
+ // In OnboardingLayout.tsx
+
+  // Initialize with empty data structure
   const [schoolData, setSchoolData] = useState({
-    name: "Edemics International School",
-    address: "123 Education Street, Learning City",
-    email: "info@edemics.edu",
-    phone: "+1 (555) 123-4567",
-    academicYear: "2024-2025",
-    country: "us",
+    name: "",
+    address: "",
+    email: "",
+    phone: "",
+    academicYear: "",
+    country: "",
     logo: null,
-    branches: [
-      {
-        name: "Head Office",
-        address: "123 Education Street, Learning City",
-        admin: "Dr. John Principal",
-        startTime: "08:00",
-        startTimeTill: "08:30",
-        endTimeFrom: "15:00",
-        endTime: "15:30",
-        recess1Start: "10:30",
-        recess1End: "11:00",
-        recess2Start: "13:00",
-        recess2End: "13:30",
-      },
-      {
-        name: "East Campus",
-        address: "456 Knowledge Avenue, Learning City",
-        admin: "Jane Director",
-        startTime: "08:30",
-        startTimeTill: "09:00",
-        endTimeFrom: "15:30",
-        endTime: "16:00",
-        recess1Start: "11:00",
-        recess1End: "11:30",
-        recess2Start: "13:30",
-        recess2End: "14:00",
-      },
-    ],
-    departments: [
-      {
-        id: "dept-1",
-        name: "Academic Department",
-        isAcademic: true,
-        type: "parent",
-        parentDepartment: null,
-      },
-      {
-        id: "dept-2",
-        name: "Science Department",
-        isAcademic: true,
-        type: "department",
-        parentDepartment: "dept-1",
-      },
-      {
-        id: "dept-3",
-        name: "Arts Department",
-        isAcademic: true,
-        type: "department",
-        parentDepartment: "dept-1",
-      },
-      {
-        id: "dept-4",
-        name: "Administration",
-        isAcademic: false,
-        type: "parent",
-        parentDepartment: null,
-      },
-    ],
-    employees: [
-      {
-        id: "EMP001",
-        name: "Dr. Robert Smith",
-        email: "robert.smith@edemics.edu",
-        phone: "+1 (555) 234-5678",
-        department: "Science Department",
-        subDepartment: "Physics",
-        class: "Class 10",
-        branch: "Head Office",
-      },
-      {
-        id: "EMP002",
-        name: "Ms. Sarah Johnson",
-        email: "sarah.johnson@edemics.edu",
-        phone: "+1 (555) 345-6789",
-        department: "Arts Department",
-        subDepartment: "Music",
-        class: "Class 8",
-        branch: "East Campus",
-      },
-    ],
-    classes: [
-      {
-        name: "Class 10",
-        department: "Science Department",
-        branch: "Head Office",
-        sections: [
-          {
-            name: "Section A",
-            teacher: "Dr. Robert Smith",
-            assistantTeacher: "Ms. Lisa Brown",
-            capacity: "30",
-            building: "Main Building",
-            floor: "Second Floor",
-            wing: "East Wing",
-          },
-          {
-            name: "Section B",
-            teacher: "Mr. James Wilson",
-            assistantTeacher: "Ms. Emily Davis",
-            capacity: "28",
-            building: "Main Building",
-            floor: "Second Floor",
-            wing: "West Wing",
-          },
-        ],
-      },
-    ],
-    subjects: [
-      {
-        code: "PHY10",
-        name: "Physics",
-        class: "Class 10",
-        section: "Section A",
-        teacher: "Dr. Robert Smith",
-        assistantTeacher: "Ms. Lisa Brown",
-      },
-      {
-        code: "CHEM10",
-        name: "Chemistry",
-        class: "Class 10",
-        section: "Section A",
-        teacher: "Dr. Michael Brown",
-        assistantTeacher: "",
-      },
-    ],
-    students: [
-      {
-        name: "Alex Johnson",
-        admissionNumber: "ST2024001",
-        class: "Class 10",
-        section: "Section A",
-        parents: [
-          {
-            name: "David Johnson",
-            type: "Father",
-            email: "david.johnson@example.com",
-            phone: "+1 (555) 987-6543",
-          },
-          {
-            name: "Maria Johnson",
-            type: "Mother",
-            email: "maria.johnson@example.com",
-            phone: "+1 (555) 876-5432",
-          },
-        ],
-      },
-    ],
-    sessions: [
-      {
-        branch: "Head Office",
-        startDate: "2024-08-15",
-        endDate: "2025-05-30",
-      },
-      {
-        branch: "East Campus",
-        startDate: "2024-08-20",
-        endDate: "2025-06-05",
-      },
-    ],
+    branches: [],
+    departments: [],
+    employees: [],
+    classes: [],
+    subjects: [],
+    students: [],
+    sessions: [],
     notifications: {
-      emailAlerts: true,
-      pushNotifications: true,
+      emailAlerts: false,
+      pushNotifications: false,
     },
   })
+
+  // Rest of the component remains the same...
+
 
   const updateSchoolData = (newData: any) => {
     // Only update if the data is actually different to prevent infinite loops
@@ -238,6 +92,8 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
       return { ...prevData, ...newData }
     })
   }
+
+  
 
   const handleNext = () => {
     if (currentStepIndex < steps.length - 1) {

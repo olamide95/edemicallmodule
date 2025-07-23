@@ -2,8 +2,8 @@
 // ... existing imports ...
 import { api } from '@/lib/api';
 import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Eye, EyeOff, Facebook, Twitter, Github } from "lucide-react"
@@ -12,6 +12,8 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Logo } from "@/components/logo"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
+import { useAuth } from '@/contexts/auth-provider';
+
 
 type UserRole = "admin" | "teacher" | "parent" | "student" | "alumni"
 
@@ -23,53 +25,32 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { theme } = useTheme()
   const router = useRouter()
- 
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const { isAuthenticated, login } = useAuth()
 
-// Then in handleLogin:
+  // Redirect if already logged in
+useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(redirectTo)
+    }
+  }, [isAuthenticated, redirectTo, router])
 
-// In your handleLogin function:
+ // Add this temporary debug in your login page's handleLogin
 const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-
+  e.preventDefault()
+  setIsLoading(true)
   try {
-    const response = await api.post('/auth/login', {
-      email,
-      password
-    });
-
-    // Store in localStorage
-    localStorage.setItem('accessToken', response.accessToken);
-    localStorage.setItem('userRole', response.role);
-    localStorage.setItem('tenantId', response.tenantId);
-    if (response.branchId) {
-      localStorage.setItem('branchId', response.branchId);
-    }
-
-    // Also set as HTTP-only cookie
-    document.cookie = `accessToken=${response.accessToken}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax; Secure`;
-
-    // Verify role
-    if (response.role !== activeRole) {
-      throw new Error(`Please login using the ${response.role} tab`);
-    }
-    const roleRoutes = {
-      admin: './onboarding',
-      teacher: '/teacher/dashboard',
-      parent: '/parent/dashboard',
-      student: '/student/dashboard',
-      alumni: '/alumni/dashboard'
-    };
-
-
-    // Redirect
-    router.push(roleRoutes[response.role]);
+    console.log('Before calling authLogin')
+    await login(email, password)
+    console.log('After successful authLogin')
   } catch (error) {
-    toast.error(error.message || 'Login failed');
+    console.error('Login error:', error)
+    toast.error(error instanceof Error ? error.message : 'Login failed')
   } finally {
-    setIsLoading(false);
+    setIsLoading(false)
   }
-};
+}
 
   const getRoleDisplayName = (role: UserRole) => {
     const roleNames = {
@@ -81,6 +62,8 @@ const handleLogin = async (e: React.FormEvent) => {
     }
     return roleNames[role]
   }
+
+ 
 
   return (
     <div className="min-h-screen flex">
@@ -255,3 +238,11 @@ const handleLogin = async (e: React.FormEvent) => {
     </div>
   )
 }
+
+function login(email: string, password: string) {
+  throw new Error('Function not implemented.');
+}
+function authLogin(email: string, password: string) {
+  throw new Error('Function not implemented.');
+}
+
