@@ -35,7 +35,7 @@ export default function StudentInformationPage() {
                   <span className="text-light-text-secondary dark:text-dark-text-secondary">
                     <ChevronRight size={16} className="inline" />
                   </span>
-                  <span className="text-primary italic">Enrollment</span>
+                  <span className="text-primary italic">Enrollment page</span>
                 </div>
 
                 <p className="text-light-text-secondary dark:text-dark-text-secondary mb-6 italic">
