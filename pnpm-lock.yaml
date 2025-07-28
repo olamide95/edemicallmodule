@@ -153,8 +153,8 @@ importers:
         specifier: latest
         version: 4.1.0
       edemicformbuilder:
-        specifier: file:../../Documents/design/FormBuilder-Version-3
-        version: file:../../Documents/design/FormBuilder-Version-3(@radix-ui/react-accordion@1.2.2(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(next@15.2.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(tailwindcss@3.4.17)
+        specifier: ^0.3.0
+        version: 0.3.0(@radix-ui/react-accordion@1.2.2(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(next@15.2.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(tailwindcss@3.4.17)
       embla-carousel-react:
         specifier: 8.5.1
         version: 8.5.1(react@19.0.0)
@@ -1868,8 +1868,8 @@ packages:
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
 
-  edemicformbuilder@file:../../Documents/design/FormBuilder-Version-3:
-    resolution: {directory: ../../Documents/design/FormBuilder-Version-3, type: directory}
+  edemicformbuilder@0.3.0:
+    resolution: {integrity: sha512-xuOPjvXfw1uFfNVdj9MMy/LYzDBjINiAqFYmut2D0ZI7mZQ39aEu7TWe4RDMT0ZqUzcx78KavNyp4m+RRtymqQ==}
     peerDependencies:
       '@radix-ui/react-accordion': ^1.2.2
       next: ^15.2.4
@@ -4217,7 +4217,7 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  edemicformbuilder@file:../../Documents/design/FormBuilder-Version-3(@radix-ui/react-accordion@1.2.2(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(next@15.2.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(tailwindcss@3.4.17):
+  edemicformbuilder@0.3.0(@radix-ui/react-accordion@1.2.2(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@types/node@22.0.0)(@types/react-dom@19.0.0)(@types/react@19.0.0)(next@15.2.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(tailwindcss@3.4.17):
     dependencies:
       '@emotion/is-prop-valid': 1.3.1
       '@hookform/resolvers': 3.9.1(react-hook-form@7.54.1(react@19.0.0))
