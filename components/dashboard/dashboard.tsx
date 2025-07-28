@@ -13,6 +13,7 @@ import  SiblingAdmissionChart  from "@/components/dashboard/sibling-admission-ch
 import  ConversionRateCard  from "@/components/dashboard/conversion-rate-card"
 import  GrowthRateCard  from "@/components/dashboard/growth-rate-card"
 
+
 export function Dashboard() {
   return (
     <div className="space-y-6">
@@ -31,6 +32,7 @@ export function Dashboard() {
         </div>
 
         {/* Existing components */}
+         <AdmissionGrowthChart />
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <Card>
                 <CardHeader className="pb-2">

@@ -16,16 +16,16 @@ type SessionKey = "This Term" | "Last Term" | "Last Session"
 // Session data with different values for each period
 const sessionData: Record<SessionKey, { name: string; label: string; value: number; color: string }[]> = {
   "This Term": [
-    { name: "Male", label: "Sketch", value: 41, color: "#16b1ff" },
-    { name: "Female", label: "Figma", value: 80, color: "#8c57ff" },
+    { name: "Male", label: "male", value: 41, color: "#16b1ff" },
+    { name: "Female", label: "female", value: 80, color: "#8c57ff" },
   ],
   "Last Term": [
-    { name: "Male", label: "Sketch", value: 38, color: "#16b1ff" },
-    { name: "Female", label: "Figma", value: 72, color: "#8c57ff" },
+    { name: "Male", label: "male", value: 38, color: "#16b1ff" },
+    { name: "Female", label: "female", value: 72, color: "#8c57ff" },
   ],
   "Last Session": [
-    { name: "Male", label: "Sketch", value: 45, color: "#16b1ff" },
-    { name: "Female", label: "Figma", value: 65, color: "#8c57ff" },
+    { name: "Male", label: "male", value: 45, color: "#16b1ff" },
+    { name: "Female", label: "female", value: 65, color: "#8c57ff" },
   ],
 }
   // Remove this duplicate state declaration
