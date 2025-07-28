@@ -6,7 +6,7 @@ import Image from "next/image"
 import { Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ModeToggle } from "@/components/mode-toggle"
+import { ModeToggle } from "@/components/ui/mode-toggle"
 
 export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
