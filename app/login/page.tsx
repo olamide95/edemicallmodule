@@ -25,8 +25,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const { theme } = useTheme()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const redirectTo = '/dashboard' // or your default path
+
   const { isAuthenticated, login } = useAuth()
 
   // Redirect if already logged in
