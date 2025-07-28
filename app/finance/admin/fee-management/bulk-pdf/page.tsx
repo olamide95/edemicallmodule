@@ -4,12 +4,18 @@ import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BulkPDFGenerator } from "@/components/admin/fee-management/bulk-pdf-generator"
 import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useTheme } from "@/components/theme-provider"
-
+import dynamic from "next/dynamic"
+const BulkPDFGenerator = dynamic(
+  () => import("@/components/admin/fee-management/bulk-pdf-generator"),
+  { 
+    ssr: false,
+    loading: () => <div className="p-4 text-center">Loading PDF generator...</div>
+  }
+)
 // Mock data for demonstration
 const mockInvoices = [
   {
@@ -133,8 +139,10 @@ export default function BulkPDFPage() {
           {/* Main Content */}
           <div className="container mx-auto max-w-6xl">
             <div className="grid grid-cols-1 gap-6">
-              <BulkPDFGenerator invoices={mockInvoices} onComplete={handleGenerationComplete} />
-
+ <BulkPDFGenerator 
+              invoices={mockInvoices} 
+              onComplete={handleGenerationComplete} 
+            />
               {generationResults.length > 0 && (
                 <Card>
                   <CardHeader>
