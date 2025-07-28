@@ -9,6 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+
+  // ✅ Add this line
+  transpilePackages: ["edemicformbuilder"],
 }
 
 export default nextConfig

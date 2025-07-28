@@ -11,6 +11,7 @@ import { AdmissionLetter } from "./admission-letter"
 import { AssessmentReport } from "./assessment-report"
 import  { StandaloneFormPreview } from 'edemicformbuilder'; 
 import  { DocTypeProvider } from 'edemicformbuilder'; 
+import 'edemicformbuilder/styles/globals.css';
 
 
 import formConfig from "./form/student-registration.json";

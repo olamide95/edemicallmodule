@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FormBuilder, ThemeProvider } from "edemicformbuilder"; // Match the package.json name
-// import formConfig from "./student-registration.json";
+ import formConfig from "./student-registration.json";
 import { Sidebar } from "@/components/sidebar"; 
 import { Header } from "@/components/header";
 import Image from "next/image"; 
