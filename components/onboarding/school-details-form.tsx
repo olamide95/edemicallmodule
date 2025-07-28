@@ -1,11 +1,9 @@
 "use client"
 
-import type React from "react"
 import { useState, useContext, useRef, useEffect } from "react"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
 import { Upload, X } from "lucide-react"
 import Image from "next/image"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
 
 export function SchoolDetailsForm() {
@@ -21,119 +19,33 @@ export function SchoolDetailsForm() {
   })
   const [previewLogo, setPreviewLogo] = useState<string | null>(schoolData.logo || null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
 
-  // Load initial data from backend
+
+  // Update local state when context changes
   useEffect(() => {
-   // In SchoolDetailsForm.tsx
-// In SchoolDetailsForm.tsx
-const fetchSchoolDetails = async () => {
-  try {
-    console.log('Fetching school details for current tenant...');
-    
-    const response = await api.get('/school-setup/school');
-    console.log('API Response:', response); // Log full response
-    
-    if (response.success && response.data) {
-      console.log('Found school data for tenant:', response.data.tenantId);
-      
-      setLocalSchoolDetails({
-        name: response.data.name || "",
-        address: response.data.address || "",
-        email: response.data.email || "",
-        phone: response.data.phone || "",
-        academicYear: response.data.academicYear || "",
-        country: response.data.country || "",
-        logo: response.data.logo || null,
-      });
-      
-      if (response.data.logo) {
-        setPreviewLogo(response.data.logo);
-      }
-      updateSchoolData(response.data);
-    } else {
-      console.log('No school data found for tenant');
-      // Initialize with empty data
-      setLocalSchoolDetails({
-        name: "",
-        address: "",
-        email: "",
-        phone: "",
-        academicYear: "",
-        country: "",
-        logo: null,
-      });
+    setLocalSchoolDetails({
+      name: schoolData.name || "",
+      address: schoolData.address || "",
+      email: schoolData.email || "",
+      phone: schoolData.phone || "",
+      academicYear: schoolData.academicYear || "",
+      country: schoolData.country || "",
+      logo: schoolData.logo || null,
+    })
+    if (schoolData.logo) {
+      setPreviewLogo(schoolData.logo)
     }
-  } catch (error) {
-    console.error('Error fetching school details:', error);
-    toast({
-      title: "Error",
-      description: "Failed to fetch school details",
-      variant: "destructive",
-    });
-  }
-};
-
-const handleBlur = async () => {
-  updateSchoolData(localSchoolDetails);
-  
-  try {
-    setIsLoading(true);
-    const response = await api.post('/school-setup/school', localSchoolDetails);
-    if (response.success) {
-      toast({
-        title: "Success",
-        description: "School details updated successfully",
-      });
-    } else {
-      throw new Error(response.error);
-    }
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: error instanceof Error ? error.message : "Failed to update school details",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-    fetchSchoolDetails()
-  }, [])
+  }, [schoolData])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setLocalSchoolDetails((prev) => ({ ...prev, [name]: value }))
+    const updatedDetails = { ...localSchoolDetails, [name]: value }
+    
+    setLocalSchoolDetails(updatedDetails)
+    updateSchoolData(updatedDetails)
   }
 
-  // Update context and backend when user leaves a field
-  const handleBlur = async () => {
-  updateSchoolData(localSchoolDetails);
-  
-  try {
-    setIsLoading(true);
-    const response = await api.post('/school-setup/school', localSchoolDetails);
-    if (response.success) {
-      toast({
-        title: "Success",
-        description: "School details updated successfully",
-      });
-    } else {
-      throw new Error(response.error);
-    }
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: error instanceof Error ? error.message : "Failed to update school details",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  // Handle logo upload
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -142,34 +54,14 @@ const handleBlur = async () => {
     reader.onload = async (event) => {
       const logoUrl = event.target?.result as string
       setPreviewLogo(logoUrl)
-      const updatedDetails = { ...localSchoolDetails, logo: logoUrl }
-      setLocalSchoolDetails(updatedDetails)
       
-      try {
-        setIsLoading(true)
-        const response = await api.put('/school-setup/school', updatedDetails)
-        if (response.success) {
-          updateSchoolData(updatedDetails)
-          toast({
-            title: "Success",
-            description: "School logo updated successfully",
-          })
-        } else {
-          throw new Error(response.error)
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to update logo",
-          variant: "destructive",
-        })
-        setPreviewLogo(null)
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""
-        }
-      } finally {
-        setIsLoading(false)
+      const updatedDetails = { 
+        ...localSchoolDetails, 
+        logo: logoUrl 
       }
+      
+      setLocalSchoolDetails(updatedDetails)
+      updateSchoolData(updatedDetails)
     }
     reader.readAsDataURL(file)
   }
@@ -184,31 +76,8 @@ const handleBlur = async () => {
     setPreviewLogo(null)
     const updatedDetails = { ...localSchoolDetails, logo: null }
     setLocalSchoolDetails(updatedDetails)
-    
-    try {
-      setIsLoading(true)
-      const response = await api.put('/school-setup/school', updatedDetails)
-      if (response.success) {
-        updateSchoolData(updatedDetails)
-        toast({
-          title: "Success",
-          description: "School logo removed successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to remove logo",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
-    }
+    updateSchoolData(updatedDetails)
+    saveSchoolDetails(updatedDetails)
   }
 
   return (
@@ -295,7 +164,6 @@ const handleBlur = async () => {
                 name="name"
                 value={localSchoolDetails.name}
                 onChange={handleChange}
-                onBlur={handleBlur}
                 placeholder="Enter school name"
                 required
                 className="form-input w-full"
@@ -316,7 +184,6 @@ const handleBlur = async () => {
                 type="email"
                 value={localSchoolDetails.email}
                 onChange={handleChange}
-                onBlur={handleBlur}
                 placeholder="school@example.com"
                 className="form-input w-full"
                 disabled={isLoading}
@@ -336,7 +203,6 @@ const handleBlur = async () => {
               name="address"
               value={localSchoolDetails.address}
               onChange={handleChange}
-              onBlur={handleBlur}
               placeholder="Enter school address"
               required
               className="form-input w-full"
@@ -357,7 +223,6 @@ const handleBlur = async () => {
                 name="phone"
                 value={localSchoolDetails.phone}
                 onChange={handleChange}
-                onBlur={handleBlur}
                 placeholder="Enter phone number"
                 className="form-input w-full"
                 disabled={isLoading}
@@ -376,7 +241,6 @@ const handleBlur = async () => {
                 name="academicYear"
                 value={localSchoolDetails.academicYear}
                 onChange={handleChange}
-                onBlur={handleBlur}
                 className="form-input w-full"
                 disabled={isLoading}
               >
@@ -400,7 +264,6 @@ const handleBlur = async () => {
               name="country"
               value={localSchoolDetails.country}
               onChange={handleChange}
-              onBlur={handleBlur}
               className="form-input w-full"
               disabled={isLoading}
             >
@@ -423,4 +286,8 @@ const handleBlur = async () => {
 
 
 
+
+function saveSchoolDetails(updatedDetails: { logo: null; name: any; address: any; email: any; phone: any; academicYear: any; country: any }) {
+  throw new Error("Function not implemented.")
+}
 

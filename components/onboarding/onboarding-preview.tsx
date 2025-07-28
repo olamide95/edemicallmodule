@@ -75,12 +75,7 @@ function SchoolDetailsPreview({ data }: { data: any }) {
     <div className="p-6 bg-light-bg dark:bg-dark-bg rounded-md border border-divider">
       <div className="flex items-center gap-4 mb-4">
         <div className="bg-primary-light rounded-full p-3">
-          <School className="h-6 w-6 text-primary" />
-        </div>
-        <h3 className="text-lg font-medium text-light-text-primary dark:text-dark-text-primary">School Information</h3>
-      </div>
-
-      {data.logo && (
+          {data.logo && (
         <div className="mb-4 flex justify-center">
           <div className="w-24 h-24 relative">
             <Image
@@ -92,6 +87,10 @@ function SchoolDetailsPreview({ data }: { data: any }) {
           </div>
         </div>
       )}
+
+        </div>
+        <h3 className="text-lg font-medium text-light-text-primary dark:text-dark-text-primary">School Information</h3>
+      </div>
 
       <div className="space-y-3">
         <div>
@@ -142,17 +141,48 @@ function BranchesPreview({ data }: { data: any }) {
               <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
                 {branch.address || "No address"}
               </p>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
                 <div>
-                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Start Time</p>
-                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.startTime || "Not set"}</p>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">Start Time From</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.startTimeFrom || "Not set"}</p>
                 </div>
                 <div>
-                  <p className="text-light-text-secondary dark:text-dark-text-secondary">End Time</p>
-                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.endTime || "Not set"}</p>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">End Time till</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.startTimeTill || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">recess1 Start Time</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.recess1StartTime || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">recess2 Start Time</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.recess2StartTime || "Not set"}</p>
                 </div>
               </div>
-            </div>
+              <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
+              <div>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">end Time From</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.endTimeFrom || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">End Time Till</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.endTimeTill || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">recess1 End Time</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.recess1EndTime || "Not set"}</p>
+                </div>
+                 <div>
+                  <p className="text-light-text-secondary dark:text-dark-text-secondary">recess2 End Time</p>
+                  <p className="text-light-text-primary dark:text-dark-text-primary">{branch.recess2EndTime || "Not set"}</p>
+                </div>
+              </div>
+                            </div>
+
+              
+              
+              
+           
           ))}
         </div>
       ) : (

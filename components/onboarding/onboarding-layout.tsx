@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-
 import { type ReactNode, useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -22,6 +21,7 @@ import { ModeToggle } from "@/components/ui/mode-toggle"
 import { OnboardingPreview } from "@/components/onboarding/onboarding-preview"
 import { AnimatedTransition } from "@/components/onboarding/animated-transition"
 import Image from "next/image"
+import { toast } from "../ui/use-toast"
 
 interface OnboardingLayoutProps {
   children: ReactNode
@@ -43,57 +43,103 @@ const steps = [
 export const OnboardingContext = React.createContext<{
   schoolData: any
   updateSchoolData: (data: any) => void
+  saveToServer: () => Promise<void>
 }>({
   schoolData: {},
   updateSchoolData: () => {},
+  saveToServer: async () => {}
 })
 
-export function OnboardingLayout({ children }: OnboardingLayoutProps) {
+export function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const currentStepIndex = steps.findIndex((step) => pathname.includes(step.id))
   const [animatingToIndex, setAnimatingToIndex] = useState<number | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
- // In OnboardingLayout.tsx
-
-  // Initialize with empty data structure
-  const [schoolData, setSchoolData] = useState({
-    name: "",
-    address: "",
-    email: "",
-    phone: "",
-    academicYear: "",
-    country: "",
-    logo: null,
-    branches: [],
-    departments: [],
-    employees: [],
-    classes: [],
-    subjects: [],
-    students: [],
-    sessions: [],
-    notifications: {
-      emailAlerts: false,
-      pushNotifications: false,
-    },
+  // Initialize with empty data structure from local storage
+  const [schoolData, setSchoolData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem('onboardingData')
+      return savedData ? JSON.parse(savedData) : {
+        name: "",
+        address: "",
+        email: "",
+        phone: "",
+        academicYear: "",
+        country: "",
+        logo: null,
+        branches: [],
+        departments: [],
+        employees: [],
+        classes: [],
+        subjects: [],
+        students: [],
+        sessions: [],
+        notifications: {
+          emailAlerts: false,
+          pushNotifications: false,
+        },
+      }
+    }
+    return {
+      name: "",
+      address: "",
+      email: "",
+      phone: "",
+      academicYear: "",
+      country: "",
+      logo: null,
+      branches: [],
+      departments: [],
+      employees: [],
+      classes: [],
+      subjects: [],
+      students: [],
+      sessions: [],
+      notifications: {
+        emailAlerts: false,
+        pushNotifications: false,
+      },
+    }
   })
 
-  // Rest of the component remains the same...
-
+  // Save to local storage whenever schoolData changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboardingData', JSON.stringify(schoolData))
+    }
+  }, [schoolData])
 
   const updateSchoolData = (newData: any) => {
-    // Only update if the data is actually different to prevent infinite loops
-    setSchoolData((prevData) => {
-      // Deep comparison to prevent unnecessary updates
-      const isEqual = JSON.stringify({ ...prevData, ...newData }) === JSON.stringify(prevData)
-      if (isEqual) {
-        return prevData // Return the previous state if no changes
-      }
-      return { ...prevData, ...newData }
-    })
+    setSchoolData((prevData: any) => ({ ...prevData, ...newData }))
   }
 
-  
+  const saveToServer = async () => {
+    setIsSaving(true)
+    try {
+      // Here you would implement your API calls to save to the server
+      // For example:
+      // const response = await api.post('/onboarding/save', schoolData)
+      // if (!response.success) throw new Error('Failed to save data')
+      
+      // For now, we'll just simulate a successful save
+      console.log('Data saved to server:', schoolData)
+      toast({
+        title: "Success",
+        description: "Onboarding data saved successfully",
+      })
+    } catch (error) {
+      console.error('Error saving data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save data to server",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const handleNext = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -102,10 +148,12 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
         router.push(steps[currentStepIndex + 1].path)
       }, 100)
     } else if (currentStepIndex === steps.length - 1) {
-      // If we're on the last step, go to the completion page
-      setTimeout(() => {
-        router.push("/onboarding/onboarding/complete")
-      }, 100)
+      // On last step, save to server
+      saveToServer().then(() => {
+        setTimeout(() => {
+          router.push("/onboarding/onboarding/complete")
+        }, 100)
+      })
     }
   }
 
@@ -134,8 +182,8 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
   const progressPercentage = (currentStepIndex / (steps.length - 1)) * 100
 
   return (
-    <OnboardingContext.Provider value={{ schoolData, updateSchoolData }}>
-      <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
+    <OnboardingContext.Provider value={{ schoolData, updateSchoolData , saveToServer}}>
+      <div className="flex flex-col">
         <header className="border-b border-divider p-4">
           <div className="container flex items-center justify-between">
             <div className="edemics-logo">
@@ -303,13 +351,11 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
           </div>
 
           {/* Live preview with animation */}
-          <div
-            className="border-l border-divider bg-light-card dark:bg-dark-card p-4 overflow-auto"
+          <div className="border-l border-divider bg-light-card dark:bg-dark-card p-4 overflow-auto"
             style={{
               width: pathname.includes("organogram") || pathname.includes("employees") ? "45%" : "33.333%",
               flex: pathname.includes("organogram") || pathname.includes("employees") ? "0 0 45%" : "0 0 33.333%",
-            }}
-          >
+            }}>
             <h2 className="text-lg font-semibold mb-4 text-light-text-primary dark:text-dark-text-primary">
               Live Preview
             </h2>

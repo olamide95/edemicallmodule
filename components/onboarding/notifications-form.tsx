@@ -5,69 +5,53 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
+
+interface NotificationSettings {
+  emailAlerts: boolean
+  pushNotifications: boolean
+}
 
 export function NotificationsForm() {
   const { schoolData, updateSchoolData } = useContext(OnboardingContext)
-  const [notifications, setNotifications] = useState({
+  const [notifications, setNotifications] = useState<NotificationSettings>({
     emailAlerts: false,
     pushNotifications: false,
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
-  // Load notifications from backend
+  // Load notifications from local storage
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get('/school-setup/notifications')
-        if (response.success && response.data) {
-          setNotifications(response.data)
-          updateSchoolData({ notifications: response.data })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch notification settings",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    const savedNotifications = JSON.parse(localStorage.getItem('notifications') || 'null')
+    const initialNotifications = savedNotifications || schoolData.notifications || {
+      emailAlerts: false,
+      pushNotifications: false
     }
-
-    fetchNotifications()
+    
+    setNotifications(initialNotifications)
+    setIsMounted(true)
   }, [])
 
-  const handleChange = async (field: keyof typeof notifications, value: boolean) => {
+  // Save to local storage whenever notifications change
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('notifications', JSON.stringify(notifications))
+      updateSchoolData({ notifications })
+    }
+  }, [notifications, isMounted])
+
+  const handleChange = (field: keyof NotificationSettings, value: boolean) => {
     const updatedNotifications = { ...notifications, [field]: value }
     setNotifications(updatedNotifications)
     
-    try {
-      setIsLoading(true)
-      const response = await api.put('/school-setup/notifications', updatedNotifications)
-      if (response.success) {
-        updateSchoolData({ notifications: updatedNotifications })
-        toast({
-          title: "Success",
-          description: "Notification settings updated successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update notifications",
-        variant: "destructive",
-      })
-      // Revert on error
-      setNotifications(notifications)
-    } finally {
-      setIsLoading(false)
-    }
+    toast({
+      title: "Success",
+      description: "Notification settings updated",
+    })
   }
+
+  if (!isMounted) return null
 
   return (
     <Card className="p-6">

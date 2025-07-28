@@ -9,9 +9,17 @@ import { Card } from "@/components/ui/card"
 import { Plus, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ExcelTable } from "@/components/excel-import/excel-table"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
+import dynamic from 'next/dynamic'
+
+// Fix for ExcelTable dynamic import
+const ExcelTable = dynamic(
+  () => import('@/components/excel-import/excel-table').then(mod => mod.ExcelTable),
+  { 
+    ssr: false,
+    loading: () => <p>Loading table...</p>
+  }
+)
 
 interface Employee {
   id?: string
@@ -29,9 +37,12 @@ export function EmployeesForm() {
   const [activeTab, setActiveTab] = useState("individual")
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
-  // Excel table columns for bulk import
+  const branches = schoolData.branches || []
+  const departments = schoolData.departments || []
+  const classes = schoolData.classes || []
+
   const employeeColumns = [
     { id: "id", name: "Employee ID", visible: true },
     { id: "name", name: "Full Name", visible: true },
@@ -43,75 +54,20 @@ export function EmployeesForm() {
     { id: "branch", name: "Branch", visible: true },
   ]
 
-  // Load employees from backend
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get('/school-setup/employees')
-        if (response.success && response.data) {
-          setEmployees(response.data)
-          updateSchoolData({ employees: response.data })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch employees",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchEmployees()
-  }, [])
+    setIsMounted(true)
+    setEmployees(schoolData.employees || [])
+  }, [schoolData.employees])
 
   const handleChange = (index: number, field: keyof Employee, value: string) => {
     const updatedEmployees = [...employees]
     updatedEmployees[index] = { ...updatedEmployees[index], [field]: value }
     setEmployees(updatedEmployees)
-  }
-
-  const saveEmployee = async (index: number) => {
-    const employee = employees[index]
-    try {
-      setIsLoading(true)
-      let response
-      
-      if (employee.id) {
-        // Update existing employee
-        response = await api.put(`/school-setup/employee/${employee.id}`, employee)
-      } else {
-        // Create new employee
-        response = await api.post('/school-setup/employee', employee)
-      }
-
-      if (response.success) {
-        const updatedEmployees = [...employees]
-        updatedEmployees[index] = response.data
-        setEmployees(updatedEmployees)
-        updateSchoolData({ employees: updatedEmployees })
-        toast({
-          title: "Success",
-          description: employee.id ? "Employee updated successfully" : "Employee created successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save employee",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    updateSchoolData({ employees: updatedEmployees })
   }
 
   const addEmployee = () => {
-    setEmployees([
+    const newEmployees = [
       ...employees,
       {
         name: "",
@@ -120,73 +76,45 @@ export function EmployeesForm() {
         department: "",
         subDepartment: "",
         class: "",
-        branch: "Head Office",
+        branch: branches.length > 0 ? branches[0].id || branches[0].name : "",
       },
-    ])
+    ]
+    setEmployees(newEmployees)
+    updateSchoolData({ employees: newEmployees })
   }
 
-  const removeEmployee = async (index: number) => {
-    const employee = employees[index]
-    if (!employee.id) {
-      // Employee not saved yet, just remove from local state
-      const updatedEmployees = [...employees]
-      updatedEmployees.splice(index, 1)
-      setEmployees(updatedEmployees)
-      updateSchoolData({ employees: updatedEmployees })
-      return
-    }
-
-    try {
-      setIsDeleting(employee.id)
-      const response = await api.delete(`/school-setup/employee/${employee.id}`)
-      if (response.success) {
-        const updatedEmployees = [...employees]
-        updatedEmployees.splice(index, 1)
-        setEmployees(updatedEmployees)
-        updateSchoolData({ employees: updatedEmployees })
-        toast({
-          title: "Success",
-          description: "Employee deleted successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete employee",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(null)
-    }
+  const removeEmployee = (index: number) => {
+    const updatedEmployees = [...employees]
+    updatedEmployees.splice(index, 1)
+    setEmployees(updatedEmployees)
+    updateSchoolData({ employees: updatedEmployees })
   }
 
-  // Handle Excel data changes
-  const handleExcelDataChange = async (newData: any[]) => {
-    try {
-      setIsLoading(true)
-      const response = await api.post('/school-setup/employees/bulk', newData)
-      if (response.success) {
-        setEmployees(response.data)
-        updateSchoolData({ employees: response.data })
-        toast({
-          title: "Success",
-          description: "Employees imported successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to import employees",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+  const handleExcelDataChange = (newData: any[]) => {
+    setEmployees(newData)
+    updateSchoolData({ employees: newData })
+    toast({
+      title: "Success",
+      description: "Employees data updated",
+    })
   }
+
+  const getSubDepartments = (departmentId: string) => {
+    return departments.filter(dept => 
+      dept.parentDepartment === departmentId && 
+      (dept.type === "sub" || dept.type === "department")
+    )
+  }
+
+  const getAcademicDepartments = () => {
+    return departments.filter(dept => dept.isAcademic)
+  }
+
+  const getNonAcademicDepartments = () => {
+    return departments.filter(dept => !dept.isAcademic)
+  }
+
+  if (!isMounted) return null
 
   return (
     <div className="space-y-6">
@@ -205,10 +133,10 @@ export function EmployeesForm() {
                   variant="destructive" 
                   size="sm" 
                   onClick={() => removeEmployee(index)}
-                  disabled={isDeleting === employee.id}
+                  disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  {isDeleting === employee.id ? "Deleting..." : "Remove"}
+                  Remove
                 </Button>
               </div>
 
@@ -220,7 +148,6 @@ export function EmployeesForm() {
                       id={`employee-id-${index}`}
                       value={employee.id || ''}
                       onChange={(e) => handleChange(index, "id", e.target.value)}
-                      onBlur={() => saveEmployee(index)}
                       placeholder="Enter employee ID"
                       disabled={isLoading}
                     />
@@ -228,21 +155,25 @@ export function EmployeesForm() {
 
                   <div className="space-y-2">
                     <Label htmlFor={`branch-${index}`}>Branch</Label>
-                    <Select 
-                      value={employee.branch} 
-                      onValueChange={(value) => {
-                        handleChange(index, "branch", value)
-                        saveEmployee(index)
-                      }}
-                      disabled={isLoading}
+                    <Select
+                      value={employee.branch}
+                      onValueChange={(value) => handleChange(index, "branch", value)}
+                      disabled={isLoading || branches.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select branch" />
+                        <SelectValue placeholder="Select branch">
+                          {branches.find(b => b.id === employee.branch || b.name === employee.branch)?.name || "Select branch"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Head Office">Head Office</SelectItem>
-                        <SelectItem value="Branch 1">Branch 1</SelectItem>
-                        <SelectItem value="Branch 2">Branch 2</SelectItem>
+                        {branches.map((branch, i) => (
+                          <SelectItem 
+                            key={i} 
+                            value={branch.id || branch.name || `branch-${i}`}
+                          >
+                            {branch.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -254,7 +185,6 @@ export function EmployeesForm() {
                     id={`employee-name-${index}`}
                     value={employee.name}
                     onChange={(e) => handleChange(index, "name", e.target.value)}
-                    onBlur={() => saveEmployee(index)}
                     placeholder="Enter employee name"
                     disabled={isLoading}
                   />
@@ -268,7 +198,6 @@ export function EmployeesForm() {
                       type="email"
                       value={employee.email}
                       onChange={(e) => handleChange(index, "email", e.target.value)}
-                      onBlur={() => saveEmployee(index)}
                       placeholder="Enter email address"
                       disabled={isLoading}
                     />
@@ -280,7 +209,6 @@ export function EmployeesForm() {
                       id={`phone-${index}`}
                       value={employee.phone}
                       onChange={(e) => handleChange(index, "phone", e.target.value)}
-                      onBlur={() => saveEmployee(index)}
                       placeholder="Enter phone number"
                       disabled={isLoading}
                     />
@@ -295,18 +223,36 @@ export function EmployeesForm() {
                       onValueChange={(value) => {
                         handleChange(index, "department", value)
                         handleChange(index, "subDepartment", "")
-                        saveEmployee(index)
                       }}
-                      disabled={isLoading}
+                      disabled={isLoading || departments.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
+                        <SelectValue placeholder="Select department">
+                          {departments.find(d => d.id === employee.department || d.name === employee.department)?.name || "Select department"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="administration">Administration</SelectItem>
-                        <SelectItem value="academic">Academic</SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
-                        <SelectItem value="hr">Human Resources</SelectItem>
+                        {/* Academic Departments Section */}
+                        <div className="px-2 py-1 text-sm text-muted-foreground">Academic Departments</div>
+                        {getAcademicDepartments().map((dept, i) => (
+                          <SelectItem 
+                            key={`academic-${i}`} 
+                            value={dept.id || dept.name || `academic-dept-${i}`}
+                          >
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                        
+                        {/* Non-Academic Departments Section */}
+                        <div className="px-2 py-1 text-sm text-muted-foreground mt-2">Non-Academic Departments</div>
+                        {getNonAcademicDepartments().map((dept, i) => (
+                          <SelectItem 
+                            key={`non-academic-${i}`} 
+                            value={dept.id || dept.name || `non-academic-dept-${i}`}
+                          >
+                            {dept.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -315,52 +261,66 @@ export function EmployeesForm() {
                     <Label htmlFor={`sub-department-${index}`}>Sub Department</Label>
                     <Select
                       value={employee.subDepartment}
-                      onValueChange={(value) => {
-                        handleChange(index, "subDepartment", value)
-                        saveEmployee(index)
-                      }}
+                      onValueChange={(value) => handleChange(index, "subDepartment", value)}
                       disabled={!employee.department || isLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select sub department" />
+                        <SelectValue placeholder="Select sub department">
+                          {getSubDepartments(employee.department).find(d => 
+                            d.id === employee.subDepartment || d.name === employee.subDepartment
+                          )?.name || "Select sub department"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {employee.department === "academic" ? (
-                          <>
-                            <SelectItem value="science">Science</SelectItem>
-                            <SelectItem value="mathematics">Mathematics</SelectItem>
-                            <SelectItem value="languages">Languages</SelectItem>
-                            <SelectItem value="arts">Arts</SelectItem>
-                          </>
+                        {employee.department ? (
+                          getSubDepartments(employee.department).length > 0 ? (
+                            getSubDepartments(employee.department).map((subDept, i) => (
+                              <SelectItem 
+                                key={i} 
+                                value={subDept.id || subDept.name || `sub-dept-${i}`}
+                              >
+                                {subDept.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-sub-dept" disabled>
+                              No sub-departments available
+                            </SelectItem>
+                          )
                         ) : (
-                          <>
-                            <SelectItem value="sub1">Sub Department 1</SelectItem>
-                            <SelectItem value="sub2">Sub Department 2</SelectItem>
-                          </>
+                          <SelectItem value="select-dept-first" disabled>
+                            Select a department first
+                          </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                {employee.department === "academic" && (
+                {employee.department && departments.find(d => 
+                  (d.id === employee.department || d.name === employee.department) && d.isAcademic
+                ) && (
                   <div className="space-y-2">
                     <Label htmlFor={`class-${index}`}>Class</Label>
                     <Select
                       value={employee.class}
-                      onValueChange={(value) => {
-                        handleChange(index, "class", value)
-                        saveEmployee(index)
-                      }}
-                      disabled={isLoading}
+                      onValueChange={(value) => handleChange(index, "class", value)}
+                      disabled={isLoading || classes.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select class" />
+                        <SelectValue placeholder="Select class">
+                          {classes.find(c => c.id === employee.class || c.name === employee.class)?.name || "Select class"}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="class1">Class 1</SelectItem>
-                        <SelectItem value="class2">Class 2</SelectItem>
-                        <SelectItem value="class3">Class 3</SelectItem>
+                        {classes.map((cls, i) => (
+                          <SelectItem 
+                            key={i} 
+                            value={cls.id || cls.name || `class-${i}`}
+                          >
+                            {cls.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

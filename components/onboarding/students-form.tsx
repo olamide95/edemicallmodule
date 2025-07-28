@@ -5,31 +5,33 @@ import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
 import { Plus, Trash2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExcelTable } from "@/components/excel-import/excel-table"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
 
 interface Parent {
+  id?: string
   name: string
   type: string
   email: string
   phone: string
+  students: string[] // Array of student IDs
 }
 
 interface Student {
-  id?: string
+  id: string
   name: string
   admissionNumber: string
   class: string
   section: string
-  parents: Parent[]
+  parents: string[] // Array of parent IDs
 }
 
 export function StudentsForm() {
   const { schoolData, updateSchoolData } = useContext(OnboardingContext)
   const [activeTab, setActiveTab] = useState("individual")
-  const [students, setStudents] = useState<Student[]>([])
+  const [viewMode, setViewMode] = useState<"student" | "parent">("student")
+  const [students, setStudents] = useState<Student[]>(schoolData.students || [])
+  const [parents, setParents] = useState<Parent[]>(schoolData.parents || [])
   const [isLoading, setIsLoading] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   // Excel table columns for bulk import
   const studentColumns = [
@@ -47,171 +49,231 @@ export function StudentsForm() {
     { id: "parent2Type", name: "Parent 2 Type", visible: true },
   ]
 
-  // Load students from backend
+  // Load data from local storage
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get('/school-setup/students')
-        if (response.success && response.data) {
-          setStudents(response.data)
-          updateSchoolData({ students: response.data })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch students",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchStudents()
+    const savedStudents = JSON.parse(localStorage.getItem('students') || '[]')
+    const savedParents = JSON.parse(localStorage.getItem('parents') || '[]')
+    
+    if (savedStudents.length > 0) setStudents(savedStudents)
+    if (savedParents.length > 0) setParents(savedParents)
+    
+    updateSchoolData({ 
+      students: savedStudents,
+      parents: savedParents
+    })
   }, [])
 
-  const handleChange = (index: number, field: keyof Student, value: string) => {
+  // Save to local storage whenever data changes
+  useEffect(() => {
+    localStorage.setItem('students', JSON.stringify(students))
+    localStorage.setItem('parents', JSON.stringify(parents))
+    updateSchoolData({ students, parents })
+  }, [students, parents])
+
+  // Helper to generate unique IDs
+  const generateId = () => Math.random().toString(36).substring(2, 11)
+
+  // Get parent details by ID
+  const getParentById = (id: string) => parents.find(p => p.id === id)
+
+  // Get student details by ID
+  const getStudentById = (id: string) => students.find(s => s.id === id)
+
+  // Student-centric handlers
+  const handleStudentChange = (index: number, field: keyof Student, value: string) => {
     const updatedStudents = [...students]
     updatedStudents[index] = { ...updatedStudents[index], [field]: value }
     setStudents(updatedStudents)
-  }
-
-  const handleParentChange = (studentIndex: number, parentIndex: number, field: keyof Parent, value: string) => {
-    const updatedStudents = [...students]
-    updatedStudents[studentIndex].parents[parentIndex] = {
-      ...updatedStudents[studentIndex].parents[parentIndex],
-      [field]: value
-    }
-    setStudents(updatedStudents)
-  }
-
-  const saveStudent = async (index: number) => {
-    const student = students[index]
-    try {
-      setIsLoading(true)
-      let response
-      
-      if (student.id) {
-        // Update existing student
-        response = await api.put(`/school-setup/student/${student.id}`, student)
-      } else {
-        // Create new student
-        response = await api.post('/school-setup/student', student)
-      }
-
-      if (response.success) {
-        const updatedStudents = [...students]
-        updatedStudents[index] = response.data
-        setStudents(updatedStudents)
-        updateSchoolData({ students: updatedStudents })
-        toast({
-          title: "Success",
-          description: student.id ? "Student updated successfully" : "Student created successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save student",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   const addStudent = () => {
     setStudents([
       ...students,
       {
+        id: generateId(),
         name: "",
         admissionNumber: "",
         class: "",
         section: "",
-        parents: [
-          { name: "", type: "", email: "", phone: "" },
-          { name: "", type: "", email: "", phone: "" }
-        ]
-      },
+        parents: []
+      }
     ])
   }
 
-  const removeStudent = async (index: number) => {
-    const student = students[index]
-    if (!student.id) {
-      // Student not saved yet, just remove from local state
-      const updatedStudents = [...students]
-      updatedStudents.splice(index, 1)
-      setStudents(updatedStudents)
-      updateSchoolData({ students: updatedStudents })
-      return
-    }
-
-    try {
-      setIsDeleting(student.id)
-      const response = await api.delete(`/school-setup/student/${student.id}`)
-      if (response.success) {
-        const updatedStudents = [...students]
-        updatedStudents.splice(index, 1)
-        setStudents(updatedStudents)
-        updateSchoolData({ students: updatedStudents })
-        toast({
-          title: "Success",
-          description: "Student deleted successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete student",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(null)
-    }
-  }
-
-  const addParent = (studentIndex: number) => {
+  const removeStudent = (index: number) => {
+    const studentToRemove = students[index]
+    
+    // Remove student from parents' student lists
+    const updatedParents = parents.map(parent => ({
+      ...parent,
+      students: parent.students.filter(id => id !== studentToRemove.id)
+    }))
+    
+    setParents(updatedParents)
+    
+    // Remove the student
     const updatedStudents = [...students]
-    updatedStudents[studentIndex].parents.push({ name: "", type: "", email: "", phone: "" })
+    updatedStudents.splice(index, 1)
     setStudents(updatedStudents)
   }
 
-  const removeParent = (studentIndex: number, parentIndex: number) => {
+  const addParentToStudent = (studentIndex: number) => {
+    const newParent: Parent = {
+      id: generateId(),
+      name: "",
+      type: "",
+      email: "",
+      phone: "",
+      students: [students[studentIndex].id]
+    }
+    
+    setParents([...parents, newParent])
+    
+    // Add parent to student
     const updatedStudents = [...students]
-    updatedStudents[studentIndex].parents.splice(parentIndex, 1)
+    updatedStudents[studentIndex].parents.push(newParent.id)
+    setStudents(updatedStudents)
+  }
+
+  const removeParentFromStudent = (studentIndex: number, parentId: string) => {
+    // Remove parent from student
+    const updatedStudents = [...students]
+    updatedStudents[studentIndex].parents = updatedStudents[studentIndex].parents.filter(id => id !== parentId)
+    setStudents(updatedStudents)
+    
+    // Remove student from parent
+    const updatedParents = parents.map(parent => 
+      parent.id === parentId 
+        ? { ...parent, students: parent.students.filter(id => id !== students[studentIndex].id) }
+        : parent
+    )
+    setParents(updatedParents)
+  }
+
+  // Parent-centric handlers
+  const handleParentChange = (index: number, field: keyof Parent, value: string) => {
+    const updatedParents = [...parents]
+    updatedParents[index] = { ...updatedParents[index], [field]: value }
+    setParents(updatedParents)
+  }
+
+  const addParent = () => {
+    setParents([
+      ...parents,
+      {
+        id: generateId(),
+        name: "",
+        type: "",
+        email: "",
+        phone: "",
+        students: []
+      }
+    ])
+  }
+
+  const removeParent = (index: number) => {
+    const parentToRemove = parents[index]
+    
+    // Remove parent from students' parent lists
+    const updatedStudents = students.map(student => ({
+      ...student,
+      parents: student.parents.filter(id => id !== parentToRemove.id)
+    }))
+    
+    setStudents(updatedStudents)
+    
+    // Remove the parent
+    const updatedParents = [...parents]
+    updatedParents.splice(index, 1)
+    setParents(updatedParents)
+  }
+
+  const addStudentToParent = (parentIndex: number) => {
+    const newStudent: Student = {
+      id: generateId(),
+      name: "",
+      admissionNumber: "",
+      class: "",
+      section: "",
+      parents: [parents[parentIndex].id]
+    }
+    
+    setStudents([...students, newStudent])
+    
+    // Add student to parent
+    const updatedParents = [...parents]
+    updatedParents[parentIndex].students.push(newStudent.id)
+    setParents(updatedParents)
+  }
+
+  const removeStudentFromParent = (parentIndex: number, studentId: string) => {
+    // Remove student from parent
+    const updatedParents = [...parents]
+    updatedParents[parentIndex].students = updatedParents[parentIndex].students.filter(id => id !== studentId)
+    setParents(updatedParents)
+    
+    // Remove parent from student
+    const updatedStudents = students.map(student => 
+      student.id === studentId
+        ? { ...student, parents: student.parents.filter(id => id !== parents[parentIndex].id) }
+        : student
+    )
     setStudents(updatedStudents)
   }
 
   // Handle Excel data changes
-  const handleExcelDataChange = async (newData: any[]) => {
-    try {
-      setIsLoading(true)
-      const response = await api.post('/school-setup/students/bulk', newData)
-      if (response.success) {
-        setStudents(response.data)
-        updateSchoolData({ students: response.data })
-        toast({
-          title: "Success",
-          description: "Students imported successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to import students",
-        variant: "destructive",
+  const handleExcelDataChange = (newData: any[]) => {
+    const newStudents: Student[] = []
+    const newParents: Parent[] = []
+    
+    newData.forEach(row => {
+      const studentId = generateId()
+      
+      // Create student
+      newStudents.push({
+        id: studentId,
+        name: row.name,
+        admissionNumber: row.admissionNumber,
+        class: row.class,
+        section: row.section,
+        parents: []
       })
-    } finally {
-      setIsLoading(false)
-    }
+      
+      // Create parents if they exist
+      if (row.parent1Name) {
+        const parent1Id = generateId()
+        newParents.push({
+          id: parent1Id,
+          name: row.parent1Name,
+          type: row.parent1Type,
+          email: row.parent1Email,
+          phone: row.parent1Phone,
+          students: [studentId]
+        })
+        newStudents[newStudents.length - 1].parents.push(parent1Id)
+      }
+      
+      if (row.parent2Name) {
+        const parent2Id = generateId()
+        newParents.push({
+          id: parent2Id,
+          name: row.parent2Name,
+          type: row.parent2Type,
+          email: row.parent2Email,
+          phone: row.parent2Phone,
+          students: [studentId]
+        })
+        newStudents[newStudents.length - 1].parents.push(parent2Id)
+      }
+    })
+    
+    setStudents([...students, ...newStudents])
+    setParents([...parents, ...newParents])
+    
+    toast({
+      title: "Success",
+      description: "Students imported successfully",
+    })
   }
 
   return (
@@ -223,219 +285,372 @@ export function StudentsForm() {
         </TabsList>
 
         <TabsContent value="individual" className="space-y-6 mt-6">
-          {students.map((student, index) => (
-            <div key={index} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Student {index + 1}</h3>
-                <button
-                  className="bg-error text-white p-2 rounded-md flex items-center text-sm"
-                  onClick={() => removeStudent(index)}
-                  disabled={isDeleting === student.id}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  {isDeleting === student.id ? "Deleting..." : "Remove"}
-                </button>
-              </div>
+          <div className="flex space-x-4 mb-6">
+            <button
+              className={`px-4 py-2 rounded-md ${viewMode === 'student' ? 'bg-primary text-white' : 'bg-secondary-bg'}`}
+              onClick={() => setViewMode('student')}
+            >
+              Student View
+            </button>
+            <button
+              className={`px-4 py-2 rounded-md ${viewMode === 'parent' ? 'bg-primary text-white' : 'bg-secondary-bg'}`}
+              onClick={() => setViewMode('parent')}
+            >
+              Parent View
+            </button>
+          </div>
 
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label
-                      htmlFor={`admission-number-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Admission Number
-                    </label>
-                    <input
-                      id={`admission-number-${index}`}
-                      value={student.admissionNumber}
-                      onChange={(e) => handleChange(index, "admissionNumber", e.target.value)}
-                      onBlur={() => saveStudent(index)}
-                      placeholder="Enter admission number"
-                      className="form-input w-full"
+          {viewMode === 'student' ? (
+            <>
+              {students.map((student, index) => (
+                <div key={student.id} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Student {index + 1}</h3>
+                    <button
+                      className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                      onClick={() => removeStudent(index)}
                       disabled={isLoading}
-                    />
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </button>
                   </div>
 
-                  <div className="space-y-2">
-                    <label
-                      htmlFor={`student-name-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Student Name
-                    </label>
-                    <input
-                      id={`student-name-${index}`}
-                      value={student.name}
-                      onChange={(e) => handleChange(index, "name", e.target.value)}
-                      onBlur={() => saveStudent(index)}
-                      placeholder="Enter student name"
-                      className="form-input w-full"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label
-                      htmlFor={`class-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Class
-                    </label>
-                    <input
-                      id={`class-${index}`}
-                      value={student.class}
-                      onChange={(e) => handleChange(index, "class", e.target.value)}
-                      onBlur={() => saveStudent(index)}
-                      placeholder="Enter class"
-                      className="form-input w-full"
-                      disabled={isLoading}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label
-                      htmlFor={`section-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Section
-                    </label>
-                    <input
-                      id={`section-${index}`}
-                      value={student.section}
-                      onChange={(e) => handleChange(index, "section", e.target.value)}
-                      onBlur={() => saveStudent(index)}
-                      placeholder="Enter section"
-                      className="form-input w-full"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <h4 className="font-medium mb-4">Parents Information</h4>
-                  {student.parents.map((parent, parentIndex) => (
-                    <div key={parentIndex} className="border rounded-md p-4 mb-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h5 className="font-medium">Parent {parentIndex + 1}</h5>
-                        {student.parents.length > 1 && (
-                          <button
-                            className="bg-error text-white p-2 rounded-md flex items-center text-sm"
-                            onClick={() => removeParent(index, parentIndex)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Remove Parent
-                          </button>
-                        )}
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Admission Number</label>
+                        <input
+                          value={student.admissionNumber}
+                          onChange={(e) => handleStudentChange(index, "admissionNumber", e.target.value)}
+                          placeholder="Enter admission number"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label
-                            htmlFor={`parent-name-${index}-${parentIndex}`}
-                            className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                          >
-                            Name
-                          </label>
-                          <input
-                            id={`parent-name-${index}-${parentIndex}`}
-                            value={parent.name}
-                            onChange={(e) => handleParentChange(index, parentIndex, "name", e.target.value)}
-                            onBlur={() => saveStudent(index)}
-                            placeholder="Enter parent name"
-                            className="form-input w-full"
-                            disabled={isLoading}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label
-                            htmlFor={`parent-type-${index}-${parentIndex}`}
-                            className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                          >
-                            Type
-                          </label>
-                          <select
-                            id={`parent-type-${index}-${parentIndex}`}
-                            value={parent.type}
-                            onChange={(e) => handleParentChange(index, parentIndex, "type", e.target.value)}
-                            onBlur={() => saveStudent(index)}
-                            className="form-input w-full"
-                            disabled={isLoading}
-                          >
-                            <option value="">Select type</option>
-                            <option value="Father">Father</option>
-                            <option value="Mother">Mother</option>
-                            <option value="Guardian">Guardian</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                        <div className="space-y-2">
-                          <label
-                            htmlFor={`parent-email-${index}-${parentIndex}`}
-                            className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                          >
-                            Email
-                          </label>
-                          <input
-                            id={`parent-email-${index}-${parentIndex}`}
-                            type="email"
-                            value={parent.email}
-                            onChange={(e) => handleParentChange(index, parentIndex, "email", e.target.value)}
-                            onBlur={() => saveStudent(index)}
-                            placeholder="Enter email"
-                            className="form-input w-full"
-                            disabled={isLoading}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label
-                            htmlFor={`parent-phone-${index}-${parentIndex}`}
-                            className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                          >
-                            Phone
-                          </label>
-                          <input
-                            id={`parent-phone-${index}-${parentIndex}`}
-                            value={parent.phone}
-                            onChange={(e) => handleParentChange(index, parentIndex, "phone", e.target.value)}
-                            onBlur={() => saveStudent(index)}
-                            placeholder="Enter phone number"
-                            className="form-input w-full"
-                            disabled={isLoading}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Student Name</label>
+                        <input
+                          value={student.name}
+                          onChange={(e) => handleStudentChange(index, "name", e.target.value)}
+                          placeholder="Enter student name"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
                       </div>
                     </div>
-                  ))}
 
-                  <button
-                    className="w-full p-3 border border-divider rounded-md flex items-center justify-center text-light-text-primary dark:text-dark-text-primary hover:bg-secondary-bg"
-                    onClick={() => addParent(index)}
-                    disabled={isLoading || student.parents.length >= 2}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Parent
-                  </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Class</label>
+                        <input
+                          value={student.class}
+                          onChange={(e) => handleStudentChange(index, "class", e.target.value)}
+                          placeholder="Enter class"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Section</label>
+                        <input
+                          value={student.section}
+                          onChange={(e) => handleStudentChange(index, "section", e.target.value)}
+                          placeholder="Enter section"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <h4 className="font-medium mb-4">Parents Information</h4>
+                      {student.parents.map((parentId, parentIndex) => {
+                        const parent = getParentById(parentId)
+                        if (!parent) return null
+                        
+                        return (
+                          <div key={parent.id} className="border rounded-md p-4 mb-4">
+                            <div className="flex justify-between items-center mb-4">
+                              <h5 className="font-medium">Parent {parentIndex + 1}</h5>
+                              <button
+                                className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                                onClick={() => removeParentFromStudent(index, parent.id)}
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Remove Parent
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Name</label>
+                                <input
+                                  value={parent.name}
+                                  onChange={(e) => {
+                                    const parentIndex = parents.findIndex(p => p.id === parent.id)
+                                    if (parentIndex >= 0) handleParentChange(parentIndex, "name", e.target.value)
+                                  }}
+                                  placeholder="Enter parent name"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Type</label>
+                                <select
+                                  value={parent.type}
+                                  onChange={(e) => {
+                                    const parentIndex = parents.findIndex(p => p.id === parent.id)
+                                    if (parentIndex >= 0) handleParentChange(parentIndex, "type", e.target.value)
+                                  }}
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                >
+                                  <option value="">Select type</option>
+                                  <option value="Father">Father</option>
+                                  <option value="Mother">Mother</option>
+                                  <option value="Guardian">Guardian</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Email</label>
+                                <input
+                                  type="email"
+                                  value={parent.email}
+                                  onChange={(e) => {
+                                    const parentIndex = parents.findIndex(p => p.id === parent.id)
+                                    if (parentIndex >= 0) handleParentChange(parentIndex, "email", e.target.value)
+                                  }}
+                                  placeholder="Enter email"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Phone</label>
+                                <input
+                                  value={parent.phone}
+                                  onChange={(e) => {
+                                    const parentIndex = parents.findIndex(p => p.id === parent.id)
+                                    if (parentIndex >= 0) handleParentChange(parentIndex, "phone", e.target.value)
+                                  }}
+                                  placeholder="Enter phone number"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      <button
+                        className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
+                        onClick={() => addParentToStudent(index)}
+                        disabled={isLoading || student.parents.length >= 2}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Parent
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              ))}
 
-          <button
-            className="w-full p-3 border border-divider rounded-md flex items-center justify-center text-light-text-primary dark:text-dark-text-primary hover:bg-secondary-bg"
-            onClick={addStudent}
-            disabled={isLoading}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Another Student
-          </button>
+              <button
+                className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
+                onClick={addStudent}
+                disabled={isLoading}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Another Student
+              </button>
+            </>
+          ) : (
+            <>
+              {parents.map((parent, index) => (
+                <div key={parent.id} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Parent {index + 1}</h3>
+                    <button
+                      className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                      onClick={() => removeParent(index)}
+                      disabled={isLoading}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Name</label>
+                        <input
+                          value={parent.name}
+                          onChange={(e) => handleParentChange(index, "name", e.target.value)}
+                          placeholder="Enter parent name"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Type</label>
+                        <select
+                          value={parent.type}
+                          onChange={(e) => handleParentChange(index, "type", e.target.value)}
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        >
+                          <option value="">Select type</option>
+                          <option value="Father">Father</option>
+                          <option value="Mother">Mother</option>
+                          <option value="Guardian">Guardian</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Email</label>
+                        <input
+                          type="email"
+                          value={parent.email}
+                          onChange={(e) => handleParentChange(index, "email", e.target.value)}
+                          placeholder="Enter email"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Phone</label>
+                        <input
+                          value={parent.phone}
+                          onChange={(e) => handleParentChange(index, "phone", e.target.value)}
+                          placeholder="Enter phone number"
+                          className="form-input w-full"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <h4 className="font-medium mb-4">Children Information</h4>
+                      {parent.students.map((studentId, studentIndex) => {
+                        const student = getStudentById(studentId)
+                        if (!student) return null
+                        
+                        return (
+                          <div key={student.id} className="border rounded-md p-4 mb-4">
+                            <div className="flex justify-between items-center mb-4">
+                              <h5 className="font-medium">Child {studentIndex + 1}</h5>
+                              <button
+                                className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                                onClick={() => removeStudentFromParent(index, student.id)}
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Remove Child
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Admission Number</label>
+                                <input
+                                  value={student.admissionNumber}
+                                  onChange={(e) => {
+                                    const studentIndex = students.findIndex(s => s.id === student.id)
+                                    if (studentIndex >= 0) handleStudentChange(studentIndex, "admissionNumber", e.target.value)
+                                  }}
+                                  placeholder="Enter admission number"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Student Name</label>
+                                <input
+                                  value={student.name}
+                                  onChange={(e) => {
+                                    const studentIndex = students.findIndex(s => s.id === student.id)
+                                    if (studentIndex >= 0) handleStudentChange(studentIndex, "name", e.target.value)
+                                  }}
+                                  placeholder="Enter student name"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Class</label>
+                                <input
+                                  value={student.class}
+                                  onChange={(e) => {
+                                    const studentIndex = students.findIndex(s => s.id === student.id)
+                                    if (studentIndex >= 0) handleStudentChange(studentIndex, "class", e.target.value)
+                                  }}
+                                  placeholder="Enter class"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium">Section</label>
+                                <input
+                                  value={student.section}
+                                  onChange={(e) => {
+                                    const studentIndex = students.findIndex(s => s.id === student.id)
+                                    if (studentIndex >= 0) handleStudentChange(studentIndex, "section", e.target.value)
+                                  }}
+                                  placeholder="Enter section"
+                                  className="form-input w-full"
+                                  disabled={isLoading}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      <button
+                        className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
+                        onClick={() => addStudentToParent(index)}
+                        disabled={isLoading}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Child
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
+                onClick={addParent}
+                disabled={isLoading}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Another Parent
+              </button>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="bulk" className="space-y-6 mt-6">
@@ -460,14 +675,14 @@ export function StudentsForm() {
                 name: student.name,
                 class: student.class,
                 section: student.section,
-                parent1Name: student.parents[0]?.name || "",
-                parent1Email: student.parents[0]?.email || "",
-                parent1Phone: student.parents[0]?.phone || "",
-                parent1Type: student.parents[0]?.type || "",
-                parent2Name: student.parents[1]?.name || "",
-                parent2Email: student.parents[1]?.email || "",
-                parent2Phone: student.parents[1]?.phone || "",
-                parent2Type: student.parents[1]?.type || "",
+                parent1Name: student.parents[0] ? getParentById(student.parents[0])?.name || "" : "",
+                parent1Email: student.parents[0] ? getParentById(student.parents[0])?.email || "" : "",
+                parent1Phone: student.parents[0] ? getParentById(student.parents[0])?.phone || "" : "",
+                parent1Type: student.parents[0] ? getParentById(student.parents[0])?.type || "" : "",
+                parent2Name: student.parents[1] ? getParentById(student.parents[1])?.name || "" : "",
+                parent2Email: student.parents[1] ? getParentById(student.parents[1])?.email || "" : "",
+                parent2Phone: student.parents[1] ? getParentById(student.parents[1])?.phone || "" : "",
+                parent2Type: student.parents[1] ? getParentById(student.parents[1])?.type || "" : "",
               }))}
               onDataChange={handleExcelDataChange}
               tableName="Students"

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import  { FormBuilder, ThemeProvider } from "edemicformbuilder";
-import formConfig from "./student-registration.json";
+import { FormBuilder, ThemeProvider } from "edemicformbuilder"; // Match the package.json name
+// import formConfig from "./student-registration.json";
 import { Sidebar } from "@/components/sidebar"; 
 import { Header } from "@/components/header";
 import Image from "next/image"; 

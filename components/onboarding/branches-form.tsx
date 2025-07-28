@@ -1,9 +1,9 @@
+
 "use client"
 
 import { useState, useContext, useEffect } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
 
 interface BranchAdmin {
@@ -21,91 +21,32 @@ interface Branch {
   startTimeTill: string
   endTimeFrom: string
   endTimeTill: string
-  recess1StartTime :String
-  recess1EndTime: String
-  recess2StartTime:String
-  recess2EndTime:String
-  
+  recess1StartTime: string
+  recess1EndTime: string
+  recess2StartTime: string
+  recess2EndTime: string
 }
-const createNewBranch = (): Branch => ({
-  name: "",
-  address: "",
-  admin: {
-    name: "",
-    email: "",
-    password: ""
-  },
-  startTimeFrom: "",
-  startTimeTill: "",
-  endTimeFrom: "",
-  endTimeTill: "",
-  recess1StartTime: "",
-  recess1EndTime: "",
-  recess2StartTime: "",
-  recess2EndTime: ""
-})
-
 
 export function BranchesForm() {
   const { schoolData, updateSchoolData } = useContext(OnboardingContext)
-  const [branches, setBranches] = useState<Branch[]>(schoolData.branches || [])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [branches, setBranches] = useState<any[]>(schoolData.branches || [])
+    const [isLoading, setIsLoading] = useState(false)
+      const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
-  // Load branches from backend on mount
+
+
   useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        setIsLoading(true)
-        const schoolResponse = await api.get('/school-setup/school')
-        if (schoolResponse.success && schoolResponse.data) {
-          const branchesResponse = await api.get(`/school-setup/school/${schoolResponse.data.id}/branches`)
-          if (branchesResponse.success && branchesResponse.data) {
-            const formattedBranches = branchesResponse.data.map((branch: any) => ({
-              id: branch.id,
-              name: branch.name,
-              address: branch.address,
-              admin: {
-                name: branch.admin?.name || '',
-                email: branch.admin?.email || '',
-                password: ''
-              },
-              startTimeFrom: branch.startTimeFrom || '',
-              startTimeTill: branch.startTimeTill || '',
-              endTimeFrom: branch.endTimeFrom || '',
-              endTimeTill: branch.endTimeTill|| '',
-              recess1StartTime: branch.recess1StartTime || '',
-              recess1EndTime: branch.recess1EndTime || '',
-              recess2StartTime: branch.recess2StartTime || '',
-              recess2EndTime: branch.recess2EndTime || ''
-            }))
-            setBranches(formattedBranches)
-            updateSchoolData({ branches: formattedBranches })
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching branches:', error)
-        toast({
-          title: "Error",
-          description: "Failed to fetch branches",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchBranches()
-  }, [])
+    setBranches(schoolData.branches || [])
+  }, [schoolData.branches])
 
-  const handleChange = (index: number, field: keyof Branch, value: string) => {
+  const handleChange = (index: number, field: string, value: any) => {
     const updatedBranches = [...branches]
     updatedBranches[index] = { ...updatedBranches[index], [field]: value }
     setBranches(updatedBranches)
     updateSchoolData({ branches: updatedBranches })
   }
 
-  const handleAdminChange = (index: number, field: keyof BranchAdmin, value: string) => {
+  const handleAdminChange = (index: number, field: string, value: string) => {
     const updatedBranches = [...branches]
     updatedBranches[index].admin = { 
       ...updatedBranches[index].admin, 
@@ -114,64 +55,6 @@ export function BranchesForm() {
     setBranches(updatedBranches)
     updateSchoolData({ branches: updatedBranches })
   }
-
-  const handleBlur = async (index: number) => {
-  const branch = branches[index];
-  if (!branch.name || !branch.address) {
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-    const schoolResponse = await api.get('/school-setup/school');
-    if (!schoolResponse.success || !schoolResponse.data) {
-      throw new Error('Failed to get school information');
-    }
-
-    const branchData = {
-      ...branch,
-      admin: branch.admin.name ? branch.admin : undefined,
-      schoolId: schoolResponse.data.id,
-      tenantId: schoolResponse.data.tenantId
-    };
-
-    let response;
-    if (branch.id) {
-      // Update existing branch
-      response = await api.put(`/school-setup/branch/${branch.id}`, branchData);
-    } else {
-      // Create new branch
-      response = await api.post('/school-setup/branch', branchData);
-    }
-
-    if (response.success) {
-      const updatedBranches = [...branches];
-      updatedBranches[index] = response.data;
-      setBranches(updatedBranches);
-      updateSchoolData({ branches: updatedBranches });
-      
-      toast({
-        title: branch.id ? "Branch updated" : "Branch created",
-        description: branch.id 
-          ? "Branch information has been updated successfully"
-          : "New branch has been created successfully",
-        variant: "success",
-      });
-    } else {
-      throw new Error(response.error);
-    }
-  } catch (error) {
-    console.error('Error saving branch:', error);
-    toast({
-      title: "Error",
-      description: error instanceof Error ? error.message : "Failed to save branch",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-  
 
   const addBranch = () => {
     const newBranches = [
@@ -188,49 +71,22 @@ export function BranchesForm() {
         startTimeTill: "",
         endTimeFrom: "",
         endTimeTill: "",
-         recess1StartTime : "",
-         recess1EndTime  : "",
-         recess2StartTime : "",
-         recess2EndTime   : "",
+        recess1StartTime: "",
+        recess1EndTime: "",
+        recess2StartTime: "",
+        recess2EndTime: "",
       },
     ]
     setBranches(newBranches)
     updateSchoolData({ branches: newBranches })
   }
 
-  const removeBranch = async (index: number) => {
-    const branch = branches[index]
-    if (!branch.id) {
-      const updatedBranches = [...branches]
-      updatedBranches.splice(index, 1)
-      setBranches(updatedBranches)
-      updateSchoolData({ branches: updatedBranches })
-      return
-    }
-
-    try {
-      setIsDeleting(branch.id)
-      const response = await api.delete(`/school-setup/branch/${branch.id}`)
-      if (response.success) {
-        const updatedBranches = [...branches]
-        updatedBranches.splice(index, 1)
-        setBranches(updatedBranches)
-        updateSchoolData({ branches: updatedBranches })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      console.error('Error deleting branch:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete branch",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(null)
-    }
+  const removeBranch = (index: number) => {
+    const updatedBranches = [...branches]
+    updatedBranches.splice(index, 1)
+    setBranches(updatedBranches)
+    updateSchoolData({ branches: updatedBranches })
   }
-
   return (
     <div className="space-y-6">
       {branches.map((branch, index) => (
@@ -263,8 +119,7 @@ export function BranchesForm() {
                 <input
                   id={`branch-name-${index}`}
                   value={branch.name}
-                  onChange={(e) => handleChange(index, "name", e.target.value)}
-                  onBlur={() => handleBlur(index)}
+            onChange={(e) => handleChange(index, "name", e.target.value)}
                   placeholder="Enter branch name"
                   disabled={index === 0 || isLoading}
                   className="form-input w-full"
@@ -282,7 +137,6 @@ export function BranchesForm() {
                   id={`branch-address-${index}`}
                   value={branch.address}
                   onChange={(e) => handleChange(index, "address", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   placeholder="Enter branch address"
                   disabled={isLoading}
                   className="form-input w-full"
@@ -306,7 +160,6 @@ export function BranchesForm() {
                   id={`admin-name-${index}`}
                   value={branch.admin.name}
                   onChange={(e) => handleAdminChange(index, "name", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   placeholder="Enter admin name"
                   disabled={isLoading}
                   className="form-input w-full"
@@ -325,7 +178,6 @@ export function BranchesForm() {
                   type="email"
                   value={branch.admin.email}
                   onChange={(e) => handleAdminChange(index, "email", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   placeholder="Enter admin email"
                   disabled={isLoading}
                   className="form-input w-full"
@@ -344,7 +196,6 @@ export function BranchesForm() {
                   type="password"
                   value={branch.admin.password}
                   onChange={(e) => handleAdminChange(index, "password", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   placeholder="Enter admin password"
                   disabled={isLoading}
                   className="form-input w-full"
@@ -369,7 +220,6 @@ export function BranchesForm() {
                   type="time"
                   value={branch.startTimeFrom}
                   onChange={(e) => handleChange(index, "startTimeFrom", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -387,7 +237,6 @@ export function BranchesForm() {
                   type="time"
                   value={branch.startTimeTill}
                   onChange={(e) => handleChange(index, "startTimeTill", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -407,7 +256,6 @@ export function BranchesForm() {
                   type="time"
                   value={branch.endTimeFrom}
                   onChange={(e) => handleChange(index, "endTimeFrom", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -425,7 +273,6 @@ export function BranchesForm() {
                   type="time"
                   value={branch.endTimeTill}
                   onChange={(e) => handleChange(index, "endTimeTill", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -445,12 +292,11 @@ export function BranchesForm() {
                   Recess 1 Start Time
                 </label>
                 <input  
-  recess1EndTime
+  
                   id={`recess1-start-${index}`}
                   type="time"
                   value={branch.recess1StartTime}
                   onChange={(e) => handleChange(index, "recess1StartTime", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -469,7 +315,6 @@ export function BranchesForm() {
                   value={branch.recess1EndTime
 }
                   onChange={(e) => handleChange(index, "recess1EndTime", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -489,7 +334,6 @@ export function BranchesForm() {
                   type="time"
                   value={branch.recess2StartTime}
                   onChange={(e) => handleChange(index, "recess2StartTime", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />
@@ -507,7 +351,6 @@ export function BranchesForm() {
                   type="time"
                   value={branch.recess2EndTime}
                   onChange={(e) => handleChange(index, "recess2EndTime", e.target.value)}
-                  onBlur={() => handleBlur(index)}
                   disabled={isLoading}
                   className="form-input w-full"
                 />

@@ -1,95 +1,29 @@
 "use client"
 
 import { useState, useContext, useEffect } from "react"
-import { Plus, Trash2 } from "lucide-react"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
-import { OrganogramVisualization } from "@/components/onboarding/organogram-visualization"
-import { api } from "@/lib/api"
+import { Plus, Trash2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
-
-interface Department {
-  id: string
-  name: string
-  isAcademic: boolean
-  type: "parent" | "department" | "sub" | "class"
-  parentDepartment: string | null
-}
 
 export function OrganogramForm() {
   const { schoolData, updateSchoolData } = useContext(OnboardingContext)
-  const [departments, setDepartments] = useState<Department[]>([])
+  const [departments, setDepartments] = useState<any[]>(schoolData.departments || [])
   const [isLoading, setIsLoading] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
-  // Load departments from backend
+  // Load departments from context on mount
   useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get('/school-setup/departments')
-        if (response.success && response.data) {
-          setDepartments(response.data)
-          updateSchoolData({ departments: response.data })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch departments",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
+    setDepartments(schoolData.departments || [])
+  }, [schoolData.departments])
 
-    fetchDepartments()
-  }, [])
-
-  const handleChange = (index: number, field: keyof Department, value: any) => {
+  const handleChange = (index: number, field: string, value: any) => {
     const updatedDepartments = [...departments]
     updatedDepartments[index] = { ...updatedDepartments[index], [field]: value }
     setDepartments(updatedDepartments)
-  }
-
-  const saveDepartment = async (index: number) => {
-    const department = departments[index]
-    try {
-      setIsLoading(true)
-      let response
-      
-      if (department.id) {
-        // Update existing department
-        response = await api.put(`/school-setup/department/${department.id}`, department)
-      } else {
-        // Create new department
-        response = await api.post('/school-setup/department', department)
-      }
-
-      if (response.success) {
-        const updatedDepartments = [...departments]
-        updatedDepartments[index] = response.data
-        setDepartments(updatedDepartments)
-        updateSchoolData({ departments: updatedDepartments })
-        toast({
-          title: "Success",
-          description: department.id ? "Department updated successfully" : "Department created successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save department",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    updateSchoolData({ departments: updatedDepartments })
   }
 
   const addDepartment = () => {
-    setDepartments([
+    const newDepartments = [
       ...departments,
       {
         id: `temp-${Date.now()}`,
@@ -98,44 +32,16 @@ export function OrganogramForm() {
         type: "department",
         parentDepartment: null,
       },
-    ])
+    ]
+    setDepartments(newDepartments)
+    updateSchoolData({ departments: newDepartments })
   }
 
-  const removeDepartment = async (index: number) => {
-    const department = departments[index]
-    if (!department.id || department.id.startsWith('temp-')) {
-      // Department not saved yet, just remove from local state
-      const updatedDepartments = [...departments]
-      updatedDepartments.splice(index, 1)
-      setDepartments(updatedDepartments)
-      updateSchoolData({ departments: updatedDepartments })
-      return
-    }
-
-    try {
-      setIsDeleting(department.id)
-      const response = await api.delete(`/school-setup/department/${department.id}`)
-      if (response.success) {
-        const updatedDepartments = [...departments]
-        updatedDepartments.splice(index, 1)
-        setDepartments(updatedDepartments)
-        updateSchoolData({ departments: updatedDepartments })
-        toast({
-          title: "Success",
-          description: "Department deleted successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete department",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(null)
-    }
+  const removeDepartment = (index: number) => {
+    const updatedDepartments = [...departments]
+    updatedDepartments.splice(index, 1)
+    setDepartments(updatedDepartments)
+    updateSchoolData({ departments: updatedDepartments })
   }
 
   const getParentDepartments = () => {
@@ -152,9 +58,6 @@ export function OrganogramForm() {
         </p>
       </div>
 
-      {/* Organogram Visualization */}
-     
-
       {departments.map((department, index) => (
         <div key={index} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">
           <div className="flex justify-between items-center mb-4">
@@ -170,10 +73,10 @@ export function OrganogramForm() {
             <button
               className="bg-error text-white p-2 rounded-md flex items-center text-sm"
               onClick={() => removeDepartment(index)}
-              disabled={isDeleting === department.id}
+              disabled={isLoading}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              {isDeleting === department.id ? "Deleting..." : "Remove"}
+              Remove
             </button>
           </div>
 
@@ -190,7 +93,6 @@ export function OrganogramForm() {
                   id={`dept-name-${index}`}
                   value={department.name}
                   onChange={(e) => handleChange(index, "name", e.target.value)}
-                  onBlur={() => saveDepartment(index)}
                   placeholder="Enter department name"
                   className="form-input w-full"
                   disabled={isLoading}
@@ -208,7 +110,6 @@ export function OrganogramForm() {
                   id={`dept-type-${index}`}
                   value={department.type}
                   onChange={(e) => handleChange(index, "type", e.target.value)}
-                  onBlur={() => saveDepartment(index)}
                   className="form-input w-full"
                   disabled={isLoading}
                 >
@@ -227,7 +128,6 @@ export function OrganogramForm() {
                 checked={department.isAcademic}
                 onChange={(e) => {
                   handleChange(index, "isAcademic", e.target.checked)
-                  saveDepartment(index)
                 }}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 disabled={isLoading}
@@ -253,7 +153,6 @@ export function OrganogramForm() {
                   value={department.parentDepartment || ""}
                   onChange={(e) => {
                     handleChange(index, "parentDepartment", e.target.value)
-                    saveDepartment(index)
                   }}
                   className="form-input w-full"
                   disabled={isLoading}

@@ -8,11 +8,10 @@ import { Card } from "@/components/ui/card"
 import { Plus, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
 
 interface Session {
-  id?: string
+  id: string
   branch: string
   startDate: string
   endDate: string
@@ -20,33 +19,30 @@ interface Session {
 
 export function SessionsForm() {
   const { schoolData, updateSchoolData } = useContext(OnboardingContext)
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [sessions, setSessions] = useState<Session[]>(schoolData.sessions || [])
   const [isLoading, setIsLoading] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
-  // Load sessions from backend
+  // Load sessions from local storage
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get('/school-setup/sessions')
-        if (response.success && response.data) {
-          setSessions(response.data)
-          updateSchoolData({ sessions: response.data })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch sessions",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    const savedSessions = JSON.parse(localStorage.getItem('sessions') || '[]')
+    if (savedSessions.length > 0) {
+      setSessions(savedSessions)
+      updateSchoolData({ sessions: savedSessions })
     }
-
-    fetchSessions()
+    setIsMounted(true)
   }, [])
+
+  // Save to local storage whenever sessions change
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('sessions', JSON.stringify(sessions))
+      updateSchoolData({ sessions })
+    }
+  }, [sessions, isMounted])
+
+  // Get branches from school data
+  const branches = schoolData.branches || []
 
   const handleChange = (index: number, field: keyof Session, value: string) => {
     const updatedSessions = [...sessions]
@@ -54,90 +50,37 @@ export function SessionsForm() {
     setSessions(updatedSessions)
   }
 
-  const saveSession = async (index: number) => {
+  const saveSession = (index: number) => {
     const session = sessions[index]
-    try {
-      setIsLoading(true)
-      let response
-      
-      if (session.id) {
-        // Update existing session
-        response = await api.put(`/school-setup/session/${session.id}`, session)
-      } else {
-        // Create new session
-        response = await api.post('/school-setup/session', session)
-      }
-
-      if (response.success) {
-        const updatedSessions = [...sessions]
-        updatedSessions[index] = response.data
-        setSessions(updatedSessions)
-        updateSchoolData({ sessions: updatedSessions })
-        toast({
-          title: "Success",
-          description: session.id ? "Session updated successfully" : "Session created successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save session",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    toast({
+      title: "Success",
+      description: "Session saved successfully",
+    })
   }
 
   const addSession = () => {
     setSessions([
       ...sessions,
       {
-        branch: "",
+        id: Date.now().toString(), // Simple ID generation
+        branch: branches.length > 0 ? branches[0].name : "",
         startDate: "",
         endDate: "",
       },
     ])
   }
 
-  const removeSession = async (index: number) => {
-    const session = sessions[index]
-    if (!session.id) {
-      // Session not saved yet, just remove from local state
-      const updatedSessions = [...sessions]
-      updatedSessions.splice(index, 1)
-      setSessions(updatedSessions)
-      updateSchoolData({ sessions: updatedSessions })
-      return
-    }
-
-    try {
-      setIsDeleting(session.id)
-      const response = await api.delete(`/school-setup/session/${session.id}`)
-      if (response.success) {
-        const updatedSessions = [...sessions]
-        updatedSessions.splice(index, 1)
-        setSessions(updatedSessions)
-        updateSchoolData({ sessions: updatedSessions })
-        toast({
-          title: "Success",
-          description: "Session deleted successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete session",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(null)
-    }
+  const removeSession = (index: number) => {
+    const updatedSessions = [...sessions]
+    updatedSessions.splice(index, 1)
+    setSessions(updatedSessions)
+    toast({
+      title: "Success",
+      description: "Session removed successfully",
+    })
   }
+
+  if (!isMounted) return null
 
   return (
     <div className="space-y-6">
@@ -149,17 +92,17 @@ export function SessionsForm() {
       </div>
 
       {sessions.map((session, index) => (
-        <Card key={index} className="p-6">
+        <Card key={session.id} className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">Session {index + 1}</h3>
             <Button 
               variant="destructive" 
               size="sm" 
               onClick={() => removeSession(index)}
-              disabled={isDeleting === session.id}
+              disabled={isLoading}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              {isDeleting === session.id ? "Deleting..." : "Remove"}
+              Remove
             </Button>
           </div>
 
@@ -172,15 +115,23 @@ export function SessionsForm() {
                   handleChange(index, "branch", value)
                   saveSession(index)
                 }}
-                disabled={isLoading}
+                disabled={isLoading || branches.length === 0}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Head Office">Head Office</SelectItem>
-                  <SelectItem value="Branch 1">Branch 1</SelectItem>
-                  <SelectItem value="Branch 2">Branch 2</SelectItem>
+                  {branches.length > 0 ? (
+                    branches.map((branch, i) => (
+                      <SelectItem key={i} value={branch.name || branch.id || `branch-${i}`}>
+                        {branch.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-branches" disabled>
+                      No branches available
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

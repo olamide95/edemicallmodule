@@ -6,7 +6,6 @@ import { Plus, Trash2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExcelTable } from "@/components/excel-import/excel-table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { api } from "@/lib/api"
 import { toast } from "@/components/ui/use-toast"
 
 interface Subject {
@@ -22,9 +21,13 @@ interface Subject {
 export function SubjectsForm() {
   const { schoolData, updateSchoolData } = useContext(OnboardingContext)
   const [activeTab, setActiveTab] = useState("individual")
-  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [subjects, setSubjects] = useState<Subject[]>(schoolData.subjects || [])
   const [isLoading, setIsLoading] = useState(false)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Get real data from schoolData
+  const classes = schoolData.classes || []
+  const employees = schoolData.employees || []
 
   // Excel table columns for bulk import
   const subjectColumns = [
@@ -36,149 +39,75 @@ export function SubjectsForm() {
     { id: "assistantTeacher", name: "Assistant Teacher", visible: true },
   ]
 
-  // Load subjects from backend
+  // Load subjects from context
   useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        setIsLoading(true)
-        const response = await api.get('/school-setup/subjects')
-        if (response.success && response.data) {
-          setSubjects(response.data)
-          updateSchoolData({ subjects: response.data })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch subjects",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchSubjects()
-  }, [])
+    setIsMounted(true)
+    setSubjects(schoolData.subjects || [])
+  }, [schoolData.subjects])
 
   const handleChange = (index: number, field: keyof Subject, value: string) => {
     const updatedSubjects = [...subjects]
     updatedSubjects[index] = { ...updatedSubjects[index], [field]: value }
     setSubjects(updatedSubjects)
-  }
-
-  const saveSubject = async (index: number) => {
-    const subject = subjects[index]
-    try {
-      setIsLoading(true)
-      let response
-      
-      if (subject.id) {
-        // Update existing subject
-        response = await api.put(`/school-setup/subject/${subject.id}`, subject)
-      } else {
-        // Create new subject
-        response = await api.post('/school-setup/subject', subject)
-      }
-
-      if (response.success) {
-        const updatedSubjects = [...subjects]
-        updatedSubjects[index] = response.data
-        setSubjects(updatedSubjects)
-        updateSchoolData({ subjects: updatedSubjects })
-        toast({
-          title: "Success",
-          description: subject.id ? "Subject updated successfully" : "Subject created successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save subject",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    updateSchoolData({ subjects: updatedSubjects })
   }
 
   const addSubject = () => {
-    setSubjects([
+    const newSubjects = [
       ...subjects,
       {
         code: "",
         name: "",
-        class: "",
+        class: classes.length > 0 ? classes[0].name : "",
         section: "",
         teacher: "",
         assistantTeacher: "",
       },
-    ])
+    ]
+    setSubjects(newSubjects)
+    updateSchoolData({ subjects: newSubjects })
   }
 
-  const removeSubject = async (index: number) => {
-    const subject = subjects[index]
-    if (!subject.id) {
-      // Subject not saved yet, just remove from local state
-      const updatedSubjects = [...subjects]
-      updatedSubjects.splice(index, 1)
-      setSubjects(updatedSubjects)
-      updateSchoolData({ subjects: updatedSubjects })
-      return
-    }
-
-    try {
-      setIsDeleting(subject.id)
-      const response = await api.delete(`/school-setup/subject/${subject.id}`)
-      if (response.success) {
-        const updatedSubjects = [...subjects]
-        updatedSubjects.splice(index, 1)
-        setSubjects(updatedSubjects)
-        updateSchoolData({ subjects: updatedSubjects })
-        toast({
-          title: "Success",
-          description: "Subject deleted successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete subject",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(null)
-    }
+  const removeSubject = (index: number) => {
+    const updatedSubjects = [...subjects]
+    updatedSubjects.splice(index, 1)
+    setSubjects(updatedSubjects)
+    updateSchoolData({ subjects: updatedSubjects })
   }
 
   // Handle Excel data changes
-  const handleExcelDataChange = async (newData: any[]) => {
-    try {
-      setIsLoading(true)
-      const response = await api.post('/school-setup/subjects/bulk', newData)
-      if (response.success) {
-        setSubjects(response.data)
-        updateSchoolData({ subjects: response.data })
-        toast({
-          title: "Success",
-          description: "Subjects imported successfully",
-        })
-      } else {
-        throw new Error(response.error)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to import subjects",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+  const handleExcelDataChange = (newData: any[]) => {
+    setSubjects(newData)
+    updateSchoolData({ subjects: newData })
+    toast({
+      title: "Success",
+      description: "Subjects data updated",
+    })
   }
+
+  // Get unique classes from school data
+  const getUniqueClasses = () => {
+    return [...new Set(classes.map(cls => cls.name))]
+  }
+
+  // Get sections for a specific class
+  const getSectionsForClass = (className: string) => {
+    const classData = classes.find(c => c.name === className)
+    if (!classData) return []
+    return classData.sections.map(section => section.name)
+  }
+
+  // Get teachers (filter employees by teaching roles)
+  const getTeachers = () => {
+    return employees
+      .filter(emp => emp.department === "teaching" || emp.department === "academic")
+      .map(emp => ({
+        value: emp.id || emp.name || `teacher-${emp.email}`, // Ensure non-empty value
+        label: emp.name
+      }))
+  }
+
+  if (!isMounted) return null
 
   return (
     <div className="space-y-6">
@@ -196,27 +125,20 @@ export function SubjectsForm() {
                 <button
                   className="bg-error text-white p-2 rounded-md flex items-center text-sm"
                   onClick={() => removeSubject(index)}
-                  disabled={isDeleting === subject.id}
+                  disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  {isDeleting === subject.id ? "Deleting..." : "Remove"}
+                  Remove
                 </button>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label
-                      htmlFor={`subject-code-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Subject Code
-                    </label>
+                    <label className="block text-sm font-medium">Subject Code</label>
                     <input
-                      id={`subject-code-${index}`}
                       value={subject.code}
                       onChange={(e) => handleChange(index, "code", e.target.value)}
-                      onBlur={() => saveSubject(index)}
                       placeholder="Enter subject code"
                       className="form-input w-full"
                       disabled={isLoading}
@@ -224,17 +146,10 @@ export function SubjectsForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <label
-                      htmlFor={`subject-name-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Subject Name
-                    </label>
+                    <label className="block text-sm font-medium">Subject Name</label>
                     <input
-                      id={`subject-name-${index}`}
                       value={subject.name}
                       onChange={(e) => handleChange(index, "name", e.target.value)}
-                      onBlur={() => saveSubject(index)}
                       placeholder="Enter subject name"
                       className="form-input w-full"
                       disabled={isLoading}
@@ -244,53 +159,62 @@ export function SubjectsForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label
-                      htmlFor={`class-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Class
-                    </label>
+                    <label className="block text-sm font-medium">Class</label>
                     <Select
                       value={subject.class}
                       onValueChange={(value) => {
                         handleChange(index, "class", value)
-                        saveSubject(index)
+                        handleChange(index, "section", "") // Reset section when class changes
                       }}
-                      disabled={isLoading}
+                      disabled={isLoading || classes.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="class1">Class 1</SelectItem>
-                        <SelectItem value="class2">Class 2</SelectItem>
-                        <SelectItem value="class3">Class 3</SelectItem>
+                        {getUniqueClasses().length > 0 ? (
+                          getUniqueClasses().map((cls, i) => (
+                            <SelectItem key={i} value={cls || `class-${i}`}> {/* Ensure non-empty value */}
+                              {cls}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-classes" disabled> {/* Changed from empty string */}
+                            No classes available
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <label
-                      htmlFor={`section-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Section
-                    </label>
+                    <label className="block text-sm font-medium">Section</label>
                     <Select
                       value={subject.section}
-                      onValueChange={(value) => {
-                        handleChange(index, "section", value)
-                        saveSubject(index)
-                      }}
-                      disabled={!subject.class || isLoading}
+                      onValueChange={(value) => handleChange(index, "section", value)}
+                      disabled={!subject.class || isLoading || getSectionsForClass(subject.class).length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select section" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="A">Section A</SelectItem>
-                        <SelectItem value="B">Section B</SelectItem>
-                        <SelectItem value="C">Section C</SelectItem>
+                        {subject.class ? (
+                          getSectionsForClass(subject.class).length > 0 ? (
+                            getSectionsForClass(subject.class).map((section, i) => (
+                              <SelectItem key={i} value={section || `section-${i}`}> {/* Ensure non-empty value */}
+                                {section}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-sections" disabled> {/* Changed from empty string */}
+                              No sections available for this class
+                            </SelectItem>
+                          )
+                        ) : (
+                          <SelectItem value="select-class-first" disabled> {/* Changed from empty string */}
+                            Select a class first
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -298,53 +222,53 @@ export function SubjectsForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label
-                      htmlFor={`teacher-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Teacher
-                    </label>
+                    <label className="block text-sm font-medium">Teacher</label>
                     <Select
                       value={subject.teacher}
-                      onValueChange={(value) => {
-                        handleChange(index, "teacher", value)
-                        saveSubject(index)
-                      }}
-                      disabled={isLoading}
+                      onValueChange={(value) => handleChange(index, "teacher", value)}
+                      disabled={isLoading || employees.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select teacher" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="teacher1">Benney Shaw</SelectItem>
-                        <SelectItem value="teacher2">John Doe</SelectItem>
-                        <SelectItem value="teacher3">Jane Smith</SelectItem>
+                        {getTeachers().length > 0 ? (
+                          getTeachers().map((teacher, i) => (
+                            <SelectItem key={i} value={teacher.value}> {/* Already ensured non-empty */}
+                              {teacher.label}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-teachers" disabled> {/* Changed from empty string */}
+                            No teachers available
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <label
-                      htmlFor={`assistant-${index}`}
-                      className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary"
-                    >
-                      Assistant Teacher
-                    </label>
+                    <label className="block text-sm font-medium">Assistant Teacher</label>
                     <Select
                       value={subject.assistantTeacher}
-                      onValueChange={(value) => {
-                        handleChange(index, "assistantTeacher", value)
-                        saveSubject(index)
-                      }}
-                      disabled={isLoading}
+                      onValueChange={(value) => handleChange(index, "assistantTeacher", value)}
+                      disabled={isLoading || employees.length === 0}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select assistant teacher" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="teacher1">Benney Shaw</SelectItem>
-                        <SelectItem value="teacher2">John Doe</SelectItem>
-                        <SelectItem value="teacher3">Jane Smith</SelectItem>
+                        {getTeachers().length > 0 ? (
+                          getTeachers().map((teacher, i) => (
+                            <SelectItem key={i} value={teacher.value}> {/* Already ensured non-empty */}
+                              {teacher.label}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-assistants" disabled> {/* Changed from empty string */}
+                            No teachers available
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -354,7 +278,7 @@ export function SubjectsForm() {
           ))}
 
           <button
-            className="w-full p-3 border border-divider rounded-md flex items-center justify-center text-light-text-primary dark:text-dark-text-primary hover:bg-secondary-bg"
+            className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
             onClick={addSubject}
             disabled={isLoading}
           >
@@ -366,15 +290,9 @@ export function SubjectsForm() {
         <TabsContent value="bulk" className="space-y-6 mt-6">
           <div className="bg-muted p-4 rounded-md mb-4">
             <h3 className="font-medium mb-2">Bulk Import Instructions</h3>
-            <p className="text-sm text-secondary dark:text-secondary">
-              Use the Excel-like interface below to paste or enter subject data. You can:
+            <p className="text-sm text-secondary">
+              Use the Excel-like interface below to paste or enter subject data.
             </p>
-            <ul className="text-sm text-secondary dark:text-secondary list-disc list-inside mt-2">
-              <li>Copy and paste data directly from Excel</li>
-              <li>Click on cells to edit individual values</li>
-              <li>Customize which columns to display</li>
-              <li>Add or remove rows as needed</li>
-            </ul>
           </div>
 
           <div className="w-full">
