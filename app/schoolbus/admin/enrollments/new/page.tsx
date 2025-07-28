@@ -656,6 +656,7 @@ export default function NewEnrollmentPage() {
                     </Label>
                   </div>
                 </div>
+                </div>
               </CardContent>
               <CardFooter>
                 <Button className="w-full">
