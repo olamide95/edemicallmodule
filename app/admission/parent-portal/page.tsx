@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,10 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdmissionLetter } from "../admission-letter"
 import { AssessmentReport } from "../assessment-report"
-import  { StandaloneFormPreview } from 'edemicformbuilder'; 
-import  { DocTypeProvider } from 'edemicformbuilder'; 
-import Link from "next/link"// Your form configuration
-import formConfig from "../form/student-registration.json";
+import { StandaloneFormPreview } from 'edemicformbuilder'
+import { DocTypeProvider } from 'edemicformbuilder'
+import Link from "next/link"
+import defaultFormConfig from "../form/student-registration.json"
 
 import {
   User,
@@ -36,6 +36,10 @@ import {
 import Image from "next/image"
 import { useTheme } from "@/components/theme-provider"
 
+// Keys for localStorage
+const FORM_CONFIG_KEY = 'schoolAdmissionFormConfig'
+const FORM_RESPONSES_KEY = 'admissionFormResponses'
+
 interface Child {
   id: string
   name: string
@@ -57,41 +61,59 @@ const ParentPortal = () => {
   const [selectedChild, setSelectedChild] = useState<string | null>(null)
   const [activeDocument, setActiveDocument] = useState<string | null>(null)
   const { theme } = useTheme()
+  const [formResponses, setFormResponses] = useState<any[]>([])
+  const [formData, setFormData] = useState(defaultFormConfig)
+  const [hasLoaded, setHasLoaded] = useState(false)
+
+  // Load saved form config and responses from localStorage on initial render
+  useEffect(() => {
+    // Load form configuration
+    const savedConfig = localStorage.getItem(FORM_CONFIG_KEY)
+    if (savedConfig) {
+      try {
+        const parsedConfig = JSON.parse(savedConfig)
+        setFormData(parsedConfig)
+      } catch (error) {
+        console.error("Error parsing saved form config:", error)
+        localStorage.removeItem(FORM_CONFIG_KEY)
+      }
+    }
+
+    // Load form responses
+    const savedResponses = localStorage.getItem(FORM_RESPONSES_KEY)
+    if (savedResponses) {
+      try {
+        setFormResponses(JSON.parse(savedResponses))
+      } catch (error) {
+        console.error("Error parsing saved form responses:", error)
+        localStorage.removeItem(FORM_RESPONSES_KEY)
+      }
+    }
+
+    setHasLoaded(true)
+  }, [])
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed)
   }
-const [formData, setFormData] = useState(formConfig); // Add this state
 
-  // Mock data for children
-  const children: Child[] = [
-    {
-      id: "1",
-      name: "Sarah Elizabeth Johnson",
-      class: "Grade 5 - Advanced Track",
-      status: "admitted",
-      applicationDate: "2024-01-15",
-      documents: {
-        admissionLetter: true,
-        assessmentReport: true,
-        parentGuidelines: true,
-      },
-      paymentDue: "2024-08-15",
-    },
-    {
-      id: "2",
-      name: "Michael James Johnson",
-      class: "Grade 3",
-      status: "assessment-scheduled",
-      applicationDate: "2024-01-20",
-      documents: {
-        assessmentReport: false,
-        admissionLetter: false,
-        parentGuidelines: false,
-      },
-      nextAction: "Assessment scheduled for Feb 15, 2024 at 10:00 AM",
-    },
-  ]
+  // Handle form submission
+  const handleFormSubmit = (formValues: any) => {
+    const newResponse = {
+      id: `ADM${Math.floor(1000 + Math.random() * 9000)}`,
+      submittedAt: new Date().toISOString(),
+      ...formValues,
+      status: "Form Submitted",
+      admissionState: "Form Submitted"
+    }
+    
+    const updatedResponses = [...formResponses, newResponse]
+    setFormResponses(updatedResponses)
+    localStorage.setItem(FORM_RESPONSES_KEY, JSON.stringify(updatedResponses))
+    
+    // Switch back to dashboard
+    setActiveTab("dashboard")
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -139,6 +161,59 @@ const [formData, setFormData] = useState(formConfig); // Add this state
 
   const getSelectedChild = () => {
     return children.find((child) => child.id === selectedChild)
+  }
+
+  // Mock data for children (will be replaced with formResponses in a real implementation)
+  const children: Child[] = [
+    {
+      id: "1",
+      name: "Sarah Elizabeth Johnson",
+      class: "Grade 5 - Advanced Track",
+      status: "admitted",
+      applicationDate: "2024-01-15",
+      documents: {
+        admissionLetter: true,
+        assessmentReport: true,
+        parentGuidelines: true,
+      },
+      paymentDue: "2024-08-15",
+    },
+    {
+      id: "2",
+      name: "Michael James Johnson",
+      class: "Grade 3",
+      status: "assessment-scheduled",
+      applicationDate: "2024-01-20",
+      documents: {
+        assessmentReport: false,
+        admissionLetter: false,
+        parentGuidelines: false,
+      },
+      nextAction: "Assessment scheduled for Feb 15, 2024 at 10:00 AM",
+    },
+    ...formResponses.map(response => ({
+      id: response.id,
+      name: `${response.firstName} ${response.lastName}`,
+      class: response.class || "Not specified",
+      status: response.status.toLowerCase().replace(" ", "-") as any,
+      applicationDate: response.submittedAt,
+      documents: {
+        admissionLetter: true,
+        assessmentReport: true,
+        parentGuidelines: true,
+      }
+    }))
+  ]
+
+  if (!hasLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-lg">Loading application...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -444,27 +519,24 @@ const [formData, setFormData] = useState(formConfig); // Add this state
               </TabsContent>
 
               {/* Add Child Tab */}
-              {/* Add Child Tab */}
-<TabsContent value="add-child" className="space-y-6">
-  <h2 className="text-2xl font-semibold">Add New Child</h2>
-  
-  <Tabs defaultValue="form" className="w-full">
-    
-    
-    <TabsContent value="form">
-     
-    
-   
-      <Card>
-        <CardContent className="p-6">
-        <DocTypeProvider>
-<StandaloneFormPreview formData={formConfig} />
-</DocTypeProvider>
-        </CardContent>
-      </Card>
-    </TabsContent>
-  </Tabs>
-</TabsContent>
+              <TabsContent value="add-child" className="space-y-6">
+                <h2 className="text-2xl font-semibold">Add New Child</h2>
+                <Tabs defaultValue="form" className="w-full">
+                  <TabsContent value="form">
+                    <Card>
+                      <CardContent className="p-6">
+                        <DocTypeProvider>
+                          <StandaloneFormPreview 
+                            formData={formData} 
+                            onSubmit={handleFormSubmit}
+                            submitButtonText="Submit Application"
+                          />
+                        </DocTypeProvider>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </TabsContent>
             </Tabs>
 
             {/* Document Viewer Modal */}

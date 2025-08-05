@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,21 +8,41 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Map, Plus } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 
+interface Route {
+  id: string
+  name: string
+  description: string
+  baseFee: string
+  status: "active" | "inactive"
+}
+
+interface BusStop {
+  id: string
+  name: string
+  fee: string
+  useBaseFee: boolean
+  pickupTime: string
+  dropoffTime: string
+}
+
 export default function NewRoutePage() {
-  const [routeData, setRouteData] = useState({
+  const router = useRouter()
+  const [routeData, setRouteData] = useState<Route>({
+    id: Date.now().toString(),
     name: "",
     description: "",
     baseFee: "",
-    isActive: true,
+    status: "active",
   })
 
-  const [busStops, setBusStops] = useState([
+  const [busStops, setBusStops] = useState<BusStop[]>([
     {
-      id: 1,
+      id: Date.now().toString(),
       name: "",
       fee: "",
       useBaseFee: true,
@@ -33,14 +51,14 @@ export default function NewRoutePage() {
     },
   ])
 
-  const handleRouteChange = (field: string, value: string | boolean) => {
+  const handleRouteChange = (field: keyof Route, value: string | boolean) => {
     setRouteData({
       ...routeData,
       [field]: value,
     })
   }
 
-  const handleBusStopChange = (id: number, field: string, value: string | boolean) => {
+  const handleBusStopChange = (id: string, field: keyof BusStop, value: string | boolean) => {
     setBusStops(
       busStops.map((stop) => {
         if (stop.id === id) {
@@ -59,11 +77,10 @@ export default function NewRoutePage() {
   }
 
   const addBusStop = () => {
-    const newId = Math.max(...busStops.map((stop) => stop.id), 0) + 1
     setBusStops([
       ...busStops,
       {
-        id: newId,
+        id: Date.now().toString(),
         name: "",
         fee: routeData.baseFee,
         useBaseFee: true,
@@ -73,7 +90,7 @@ export default function NewRoutePage() {
     ])
   }
 
-  const removeBusStop = (id: number) => {
+  const removeBusStop = (id: string) => {
     if (busStops.length > 1) {
       setBusStops(busStops.filter((stop) => stop.id !== id))
     }
@@ -81,15 +98,48 @@ export default function NewRoutePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Submit logic would go here
-    console.log("Submitted route data:", routeData)
-    console.log("Bus stops:", busStops)
+    
+    // Create route object
+    const newRoute = {
+      ...routeData,
+      stops: busStops.length,
+      buses: 1, // Default value, can be updated later
+      students: busStops.reduce((sum, stop) => sum + 5, 0), // Example calculation
+      busStops: busStops.map(stop => ({
+        ...stop,
+        route: routeData.name,
+        students: 5, // Default value
+      }))
+    }
+
+    // Get existing data from localStorage
+    const savedRoutes = localStorage.getItem('routes')
+    const savedStops = localStorage.getItem('stops')
+
+    const existingRoutes = savedRoutes ? JSON.parse(savedRoutes) : []
+    const existingStops = savedStops ? JSON.parse(savedStops) : []
+
+    // Update routes
+    const updatedRoutes = [...existingRoutes, newRoute]
+    
+    // Update stops
+    const updatedStops = [
+      ...existingStops,
+      ...newRoute.busStops
+    ]
+
+    // Save to localStorage
+    localStorage.setItem('routes', JSON.stringify(updatedRoutes))
+    localStorage.setItem('stops', JSON.stringify(updatedStops))
+
+    // Redirect to routes page
+    router.push('/schoolbus/admin/routes')
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2">
-        <Link href="/routes">
+        <Link href="/schoolbus/admin/routes">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -130,7 +180,9 @@ export default function NewRoutePage() {
                       handleRouteChange("baseFee", newBaseFee)
 
                       // Update fees for bus stops that use base fee
-                      setBusStops(busStops.map((stop) => (stop.useBaseFee ? { ...stop, fee: newBaseFee } : stop)))
+                      setBusStops(busStops.map((stop) => 
+                        stop.useBaseFee ? { ...stop, fee: newBaseFee } : stop
+                      ))
                     }}
                     required
                   />
@@ -151,8 +203,10 @@ export default function NewRoutePage() {
               <div className="flex items-center space-x-2">
                 <Switch
                   id="route-active"
-                  checked={routeData.isActive}
-                  onCheckedChange={(checked) => handleRouteChange("isActive", checked)}
+                  checked={routeData.status === "active"}
+                  onCheckedChange={(checked) => 
+                    handleRouteChange("status", checked ? "active" : "inactive")
+                  }
                 />
                 <Label htmlFor="route-active">Route is active</Label>
               </div>
@@ -198,7 +252,9 @@ export default function NewRoutePage() {
                           <Checkbox
                             id={`use-base-fee-${stop.id}`}
                             checked={stop.useBaseFee}
-                            onCheckedChange={(checked) => handleBusStopChange(stop.id, "useBaseFee", !!checked)}
+                            onCheckedChange={(checked) => 
+                              handleBusStopChange(stop.id, "useBaseFee", checked)
+                            }
                           />
                           <Label htmlFor={`use-base-fee-${stop.id}`} className="text-xs text-muted-foreground">
                             Use base fee
@@ -244,7 +300,7 @@ export default function NewRoutePage() {
               </Button>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Link href="/routes">
+              <Link href="/schoolbus/admin/routes">
                 <Button variant="outline">Cancel</Button>
               </Link>
               <Button type="submit">

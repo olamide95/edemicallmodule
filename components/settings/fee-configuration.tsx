@@ -1,31 +1,53 @@
 "use client"
-import { SetStateAction, useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pencil, Save } from "lucide-react"
 
-// Sample data for classes
-const initialClasses = [
-  { id: 1, name: "Toddlers", fee: 500, currency: "USD", active: true, editing: false },
-  { id: 2, name: "Nursery 1", fee: 600, currency: "USD", active: true, editing: false },
-  { id: 3, name: "Nursery 2", fee: 700, currency: "USD", active: true, editing: false },
-  { id: 4, name: "Grade 1", fee: 800, currency: "USD", active: true, editing: false },
-  { id: 5, name: "Grade 2", fee: 900, currency: "USD", active: true, editing: false },
-  { id: 6, name: "Grade 3", fee: 1000, currency: "USD", active: true, editing: false },
-  { id: 7, name: "Grade 4", fee: 1100, currency: "USD", active: true, editing: false },
-  { id: 8, name: "Grade 5", fee: 1200, currency: "USD", active: true, editing: false },
-  { id: 9, name: "Grade 6", fee: 1300, currency: "USD", active: true, editing: false },
-]
+type ClassFee = {
+  id: number
+  name: string
+  fee: number
+  currency: string
+  active: boolean
+  editing: boolean
+}
 
 export function FeeConfiguration() {
-  const [classes, setClasses] = useState(initialClasses)
+  const [classes, setClasses] = useState<ClassFee[]>([])
   const [currency, setCurrency] = useState("USD")
+
+  // Load classes from local storage
+  useEffect(() => {
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      
+      // Set currency from admission settings if exists
+      if (data.admissionSettings?.currency) {
+        setCurrency(data.admissionSettings.currency)
+      }
+      
+      // Initialize classes with fees if they exist
+      if (data.classes && data.classes.length > 0) {
+        const classesWithFees = data.classes.map((cls: any) => ({
+          id: cls.id,
+          name: cls.name,
+          fee: cls.fee || 0,
+          currency: data.admissionSettings?.currency || "USD",
+          active: cls.active !== false, // Default to true if not set
+          editing: false
+        }))
+        setClasses(classesWithFees)
+      }
+    }
+  }, [])
 
   const handleEditFee = (id: number) => {
     setClasses(classes.map((c) => (c.id === id ? { ...c, editing: true } : c)))
@@ -33,6 +55,25 @@ export function FeeConfiguration() {
 
   const handleSaveFee = (id: number) => {
     setClasses(classes.map((c) => (c.id === id ? { ...c, editing: false } : c)))
+    
+    // Save to local storage
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      const updatedClasses = data.classes.map((cls: any) => {
+        const updatedClass = classes.find(c => c.id === cls.id && c.editing === false)
+        return updatedClass ? { ...cls, fee: updatedClass.fee, active: updatedClass.active } : cls
+      })
+      
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        classes: updatedClasses,
+        admissionSettings: {
+          ...data.admissionSettings,
+          currency
+        }
+      }))
+    }
   }
 
   const handleFeeChange = (id: number, value: number) => {
@@ -48,12 +89,31 @@ export function FeeConfiguration() {
     setClasses(classes.map((c) => ({ ...c, currency: value })))
   }
 
-  const formatCurrency = (amount: string | number | bigint, currencyCode: string) => {
-    const numericAmount = typeof amount === "string" ? Number(amount) : amount
+  const handleSaveAll = () => {
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      const updatedClasses = data.classes.map((cls: any) => {
+        const updatedClass = classes.find(c => c.id === cls.id)
+        return updatedClass ? { ...cls, fee: updatedClass.fee, active: updatedClass.active } : cls
+      })
+      
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        classes: updatedClasses,
+        admissionSettings: {
+          ...data.admissionSettings,
+          currency
+        }
+      }))
+    }
+  }
+
+  const formatCurrency = (amount: number, currencyCode: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currencyCode,
-    }).format(numericAmount)
+    }).format(amount)
   }
 
   return (
@@ -138,7 +198,7 @@ export function FeeConfiguration() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-end">
-          <Button>Save All Changes</Button>
+          <Button onClick={handleSaveAll}>Save All Changes</Button>
         </CardFooter>
       </Card>
     </div>

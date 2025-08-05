@@ -12,7 +12,7 @@ export default function ClubsPage() {
           <h1 className="text-3xl font-bold">Clubs</h1>
           <p className="text-muted-foreground">Manage extracurricular activities</p>
         </div>
-        <Link href="/admin/clubs/create">
+        <Link href="/extracurricular/admin/clubs/create">
           <Button>
             <PlusIcon className="h-4 w-4 mr-1" />
             Create Club

@@ -8,9 +8,6 @@ import { ChevronRight } from "lucide-react"
 
 import Image from "next/image"
 import { useTheme } from "@/components/theme-provider"
-
-
-
 export default function DashboardPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
    const { theme } = useTheme()

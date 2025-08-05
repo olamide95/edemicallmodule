@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,34 +15,82 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import QRCode from "react-qr-code"
 
+type AdmissionPeriod = {
+  id: number
+  year: string
+  startDate: Date
+  endDate: Date
+  deadline: Date
+  message: string
+}
+
 export function BasicSettings() {
   const [customUrl, setCustomUrl] = useState("https://school.edu/admissions")
   const [documentPrefix, setDocumentPrefix] = useState("ADM")
   const [documentSuffix, setDocumentSuffix] = useState("2023")
   const [nextNumber, setNextNumber] = useState("001")
   const [referenceType, setReferenceType] = useState("prefix")
-  const [admissionPeriods, setAdmissionPeriods] = useState([
-    {
-      id: 1,
-      year: "2023-2024",
-      startDate: new Date(2023, 8, 1), // September 1, 2023
-      endDate: new Date(2024, 7, 31), // August 31, 2024
-      deadline: new Date(2023, 6, 31), // July 31, 2023
-      message: "Admission for this academic year is now closed. Please check back for the next academic year.",
-    },
-    {
-      id: 2,
-      year: "2024-2025",
-      startDate: new Date(2024, 8, 1), // September 1, 2024
-      endDate: new Date(2025, 7, 31), // August 31, 2025
-      deadline: new Date(2024, 6, 31), // July 31, 2024
-      message: "Admission for this academic year is now closed. Please check back for the next academic year.",
-    },
-  ])
-  const [selectedPeriod, setSelectedPeriod] = useState(admissionPeriods[0])
-  const [deadlineDate, setDeadlineDate] = useState(admissionPeriods[0].deadline)
-  const [deadlineMessage, setDeadlineMessage] = useState(admissionPeriods[0].message)
+  const [admissionPeriods, setAdmissionPeriods] = useState<AdmissionPeriod[]>([])
+  const [selectedPeriod, setSelectedPeriod] = useState<AdmissionPeriod | null>(null)
+  const [deadlineDate, setDeadlineDate] = useState<Date | null>(null)
+  const [deadlineMessage, setDeadlineMessage] = useState("")
   const [selectedTemplate, setSelectedTemplate] = useState("template1")
+
+  // Load data from local storage
+  useEffect(() => {
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      
+      // Set admission periods from local storage or initialize with defaults
+      if (data.admissionSettings) {
+        setCustomUrl(data.admissionSettings.customUrl || "https://school.edu/admissions")
+        setDocumentPrefix(data.admissionSettings.documentPrefix || "ADM")
+        setDocumentSuffix(data.admissionSettings.documentSuffix || new Date().getFullYear().toString())
+        setNextNumber(data.admissionSettings.nextNumber || "001")
+        setReferenceType(data.admissionSettings.referenceType || "prefix")
+        setSelectedTemplate(data.admissionSettings.selectedTemplate || "template1")
+        
+        if (data.admissionSettings.admissionPeriods) {
+          const periods = data.admissionSettings.admissionPeriods.map((p: any) => ({
+            ...p,
+            startDate: new Date(p.startDate),
+            endDate: new Date(p.endDate),
+            deadline: new Date(p.deadline)
+          }))
+          setAdmissionPeriods(periods)
+          setSelectedPeriod(periods[0])
+          setDeadlineDate(new Date(periods[0].deadline))
+          setDeadlineMessage(periods[0].message)
+        }
+      } else {
+        // Initialize with default periods if none exist
+        const currentYear = new Date().getFullYear()
+        const defaultPeriods = [
+          {
+            id: 1,
+            year: `${currentYear}-${currentYear + 1}`,
+            startDate: new Date(currentYear, 8, 1), // September 1
+            endDate: new Date(currentYear + 1, 7, 31), // August 31
+            deadline: new Date(currentYear, 6, 31), // July 31
+            message: "Admission for this academic year is now closed. Please check back for the next academic year.",
+          },
+          {
+            id: 2,
+            year: `${currentYear + 1}-${currentYear + 2}`,
+            startDate: new Date(currentYear + 1, 8, 1),
+            endDate: new Date(currentYear + 2, 7, 31),
+            deadline: new Date(currentYear + 1, 6, 31),
+            message: "Admission for this academic year is now closed. Please check back for the next academic year.",
+          },
+        ]
+        setAdmissionPeriods(defaultPeriods)
+        setSelectedPeriod(defaultPeriods[0])
+        setDeadlineDate(defaultPeriods[0].deadline)
+        setDeadlineMessage(defaultPeriods[0].message)
+      }
+    }
+  }, [])
 
   const handlePeriodChange = (year: string) => {
     const period = admissionPeriods.find((p) => p.year === year)
@@ -54,16 +102,65 @@ export function BasicSettings() {
   }
 
   const handleSaveDeadline = () => {
+    if (!selectedPeriod || !deadlineDate) return
+
     const updatedPeriods = admissionPeriods.map((p) =>
-      p.id === selectedPeriod.id ? { ...p, deadline: deadlineDate, message: deadlineMessage } : p,
+      p.id === selectedPeriod.id ? { ...p, deadline: deadlineDate, message: deadlineMessage } : p
     )
+
     setAdmissionPeriods(updatedPeriods)
-    // In a real app, you would save this to your backend
+    
+    // Save to local storage
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        admissionSettings: {
+          ...data.admissionSettings,
+          customUrl,
+          documentPrefix,
+          documentSuffix,
+          nextNumber,
+          referenceType,
+          selectedTemplate,
+          admissionPeriods: updatedPeriods.map(p => ({
+            ...p,
+            startDate: p.startDate.toISOString(),
+            endDate: p.endDate.toISOString(),
+            deadline: p.deadline.toISOString()
+          }))
+        }
+      }))
+    }
+  }
+
+  const handleSaveSettings = () => {
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        admissionSettings: {
+          customUrl,
+          documentPrefix,
+          documentSuffix,
+          nextNumber,
+          referenceType,
+          selectedTemplate,
+          admissionPeriods: admissionPeriods.map(p => ({
+            ...p,
+            startDate: p.startDate.toISOString(),
+            endDate: p.endDate.toISOString(),
+            deadline: p.deadline.toISOString()
+          }))
+        }
+      }))
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Custom URL and Barcode */}
       <Card>
         <CardHeader>
           <CardTitle>Admission Link</CardTitle>
@@ -94,7 +191,6 @@ export function BasicSettings() {
         </CardContent>
       </Card>
 
-      {/* Document Reference */}
       <Card>
         <CardHeader>
           <CardTitle>Document Reference</CardTitle>
@@ -166,84 +262,84 @@ export function BasicSettings() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Save Reference Settings</Button>
+          <Button onClick={handleSaveSettings}>Save Reference Settings</Button>
         </CardFooter>
       </Card>
 
-      {/* Admission Period */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Admission Period</CardTitle>
-          <CardDescription>Set the admission periods and deadlines for each academic year.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="academic-year">Academic Year</Label>
-            <Select value={selectedPeriod.year} onValueChange={handlePeriodChange}>
-              <SelectTrigger id="academic-year">
-                <SelectValue placeholder="Select academic year" />
-              </SelectTrigger>
-              <SelectContent>
-                {admissionPeriods.map((period) => (
-                  <SelectItem key={period.id} value={period.year}>
-                    {period.year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Period Range</Label>
-            <div className="rounded-md bg-muted p-3 text-sm">
-              {format(selectedPeriod.startDate, "MMMM d, yyyy")} to {format(selectedPeriod.endDate, "MMMM d, yyyy")}
+      {selectedPeriod && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Admission Period</CardTitle>
+            <CardDescription>Set the admission periods and deadlines for each academic year.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="academic-year">Academic Year</Label>
+              <Select value={selectedPeriod.year} onValueChange={handlePeriodChange}>
+                <SelectTrigger id="academic-year">
+                  <SelectValue placeholder="Select academic year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {admissionPeriods.map((period) => (
+                    <SelectItem key={period.id} value={period.year}>
+                      {period.year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <p className="text-sm text-muted-foreground">This is the full academic year period.</p>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="deadline">Admission Deadline</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal", !deadlineDate && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {deadlineDate ? format(deadlineDate, "PPP") : "Select a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={deadlineDate}
-                  onSelect={(date) => date && setDeadlineDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <p className="text-sm text-muted-foreground">
-              Applications received after this date will see the missed deadline message.
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label>Period Range</Label>
+              <div className="rounded-md bg-muted p-3 text-sm">
+                {format(selectedPeriod.startDate, "MMMM d, yyyy")} to {format(selectedPeriod.endDate, "MMMM d, yyyy")}
+              </div>
+              <p className="text-sm text-muted-foreground">This is the full academic year period.</p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="deadline-message">Message for Missed Deadline</Label>
-            <Textarea
-              id="deadline-message"
-              value={deadlineMessage}
-              onChange={(e) => setDeadlineMessage(e.target.value)}
-              placeholder="Enter message to display when deadline is missed"
-              rows={4}
-            />
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={handleSaveDeadline}>Save Period Settings</Button>
-        </CardFooter>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="deadline">Admission Deadline</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn("w-full justify-start text-left font-normal", !deadlineDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deadlineDate ? format(deadlineDate, "PPP") : "Select a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={deadlineDate}
+                    onSelect={(date) => date && setDeadlineDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-sm text-muted-foreground">
+                Applications received after this date will see the missed deadline message.
+              </p>
+            </div>
 
-      {/* Document Settings */}
+            <div className="space-y-2">
+              <Label htmlFor="deadline-message">Message for Missed Deadline</Label>
+              <Textarea
+                id="deadline-message"
+                value={deadlineMessage}
+                onChange={(e) => setDeadlineMessage(e.target.value)}
+                placeholder="Enter message to display when deadline is missed"
+                rows={4}
+              />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={handleSaveDeadline}>Save Period Settings</Button>
+          </CardFooter>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Document Settings</CardTitle>
@@ -314,7 +410,7 @@ export function BasicSettings() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Save Document Settings</Button>
+          <Button onClick={handleSaveSettings}>Save Document Settings</Button>
         </CardFooter>
       </Card>
     </div>

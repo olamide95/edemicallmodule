@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,104 +8,52 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Plus, Search } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useEffect, useState } from "react"
 
-const administrators = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    phone: "+234 123 456 7890",
-    email: "sarah.johnson@example.com",
-    bus: "Bus A",
-    route: "North Route",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Emily Davis",
-    phone: "+234 234 567 8901",
-    email: "emily.davis@example.com",
-    bus: "Bus B",
-    route: "East Route",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Jessica Taylor",
-    phone: "+234 345 678 9012",
-    email: "jessica.taylor@example.com",
-    bus: "Bus C",
-    route: "West Route",
-    status: "inactive",
-  },
-  {
-    id: "4",
-    name: "Jennifer Anderson",
-    phone: "+234 456 789 0123",
-    email: "jennifer.anderson@example.com",
-    bus: "Bus D",
-    route: "South Route",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Lisa Robinson",
-    phone: "+234 567 890 1234",
-    email: "lisa.robinson@example.com",
-    bus: "Bus E",
-    route: "Central Route",
-    status: "active",
-  },
-]
-
-const drivers = [
-  {
-    id: "1",
-    name: "John Smith",
-    phone: "+234 123 456 7890",
-    license: "DL12345678",
-    bus: "Bus A",
-    route: "North Route",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Michael Brown",
-    phone: "+234 234 567 8901",
-    license: "DL23456789",
-    bus: "Bus B",
-    route: "East Route",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Robert Wilson",
-    phone: "+234 345 678 9012",
-    license: "DL34567890",
-    bus: "Bus C",
-    route: "West Route",
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "David Martinez",
-    phone: "+234 456 789 0123",
-    license: "DL45678901",
-    bus: "Bus D",
-    route: "South Route",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "James Thomas",
-    phone: "+234 567 890 1234",
-    license: "DL56789012",
-    bus: "Bus E",
-    route: "Central Route",
-    status: "inactive",
-  },
-]
+interface StaffMember {
+  id: string
+  name: string
+  phone: string
+  email?: string
+  license?: string
+  bus: string
+  route: string
+  status: "active" | "inactive"
+  role: "administrator" | "driver"
+}
 
 export default function StaffPage() {
+  const [staff, setStaff] = useState<StaffMember[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Load staff from localStorage
+    const savedStaff = localStorage.getItem('employees')
+    if (savedStaff) {
+      setStaff(JSON.parse(savedStaff))
+    }
+    setIsLoading(false)
+  }, [])
+
+  const filteredAdministrators = staff.filter(member => 
+    member.role === "administrator" &&
+    (member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     member.bus.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
+
+  const filteredDrivers = staff.filter(member => 
+    member.role === "driver" &&
+    (member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     member.license?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     member.bus.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -120,7 +70,13 @@ export default function StaffPage() {
           <div className="flex items-center gap-2">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search staff..." className="w-full bg-background pl-8" />
+              <Input 
+                type="search" 
+                placeholder="Search staff..." 
+                className="w-full bg-background pl-8" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <Link href="/schoolbus/admin/staff/new">
               <Button>
@@ -151,27 +107,35 @@ export default function StaffPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {administrators.map((admin) => (
-                    <TableRow key={admin.id}>
-                      <TableCell className="font-medium">{admin.name}</TableCell>
-                      <TableCell>{admin.phone}</TableCell>
-                      <TableCell>{admin.email}</TableCell>
-                      <TableCell>{admin.bus}</TableCell>
-                      <TableCell>{admin.route}</TableCell>
-                      <TableCell>
-                        <Badge variant={admin.status === "active" ? "default" : "outline"}>
-                          {admin.status.charAt(0).toUpperCase() + admin.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/staff/${admin.id}`}>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
-                        </Link>
+                  {filteredAdministrators.length > 0 ? (
+                    filteredAdministrators.map((admin) => (
+                      <TableRow key={admin.id}>
+                        <TableCell className="font-medium">{admin.name}</TableCell>
+                        <TableCell>{admin.phone}</TableCell>
+                        <TableCell>{admin.email}</TableCell>
+                        <TableCell>{admin.bus}</TableCell>
+                        <TableCell>{admin.route}</TableCell>
+                        <TableCell>
+                          <Badge variant={admin.status === "active" ? "default" : "outline"}>
+                            {admin.status.charAt(0).toUpperCase() + admin.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/schoolbus/admin/staff/${admin.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">
+                        No administrators found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -198,27 +162,35 @@ export default function StaffPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {drivers.map((driver) => (
-                    <TableRow key={driver.id}>
-                      <TableCell className="font-medium">{driver.name}</TableCell>
-                      <TableCell>{driver.phone}</TableCell>
-                      <TableCell>{driver.license}</TableCell>
-                      <TableCell>{driver.bus}</TableCell>
-                      <TableCell>{driver.route}</TableCell>
-                      <TableCell>
-                        <Badge variant={driver.status === "active" ? "default" : "outline"}>
-                          {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/staff/${driver.id}`}>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
-                        </Link>
+                  {filteredDrivers.length > 0 ? (
+                    filteredDrivers.map((driver) => (
+                      <TableRow key={driver.id}>
+                        <TableCell className="font-medium">{driver.name}</TableCell>
+                        <TableCell>{driver.phone}</TableCell>
+                        <TableCell>{driver.license}</TableCell>
+                        <TableCell>{driver.bus}</TableCell>
+                        <TableCell>{driver.route}</TableCell>
+                        <TableCell>
+                          <Badge variant={driver.status === "active" ? "default" : "outline"}>
+                            {driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/schoolbus/admin/staff/${driver.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">
+                        No drivers found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

@@ -1,12 +1,16 @@
 "use client"
 
-import { useState, useContext, useEffect } from "react"
+import { useState, useContext, useEffect, useMemo, useCallback } from "react"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
 import { Plus, Trash2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExcelTable } from "@/components/excel-import/excel-table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
+import { Button } from "../ui/button"
 
 interface Subject {
   id?: string
@@ -16,6 +20,8 @@ interface Subject {
   section: string
   teacher: string
   assistantTeacher: string
+  customTeacher?: string
+  customAssistantTeacher?: string
 }
 
 export function SubjectsForm() {
@@ -45,16 +51,35 @@ export function SubjectsForm() {
     setSubjects(schoolData.subjects || [])
   }, [schoolData.subjects])
 
+  // Save to localStorage whenever subjects change
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('subjects', JSON.stringify(subjects))
+    }
+  }, [subjects, isMounted])
+
+  // Update context only when needed
+  useEffect(() => {
+    if (isMounted) {
+      const currentSubjects = JSON.stringify(schoolData.subjects || [])
+      const newSubjects = JSON.stringify(subjects)
+      if (currentSubjects !== newSubjects) {
+        updateSchoolData({ subjects })
+      }
+    }
+  }, [subjects, isMounted, schoolData.subjects, updateSchoolData])
+
   const handleChange = (index: number, field: keyof Subject, value: string) => {
-    const updatedSubjects = [...subjects]
-    updatedSubjects[index] = { ...updatedSubjects[index], [field]: value }
-    setSubjects(updatedSubjects)
-    updateSchoolData({ subjects: updatedSubjects })
+    setSubjects(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
   }
 
   const addSubject = () => {
-    const newSubjects = [
-      ...subjects,
+    setSubjects(prev => [
+      ...prev,
       {
         code: "",
         name: "",
@@ -62,23 +87,28 @@ export function SubjectsForm() {
         section: "",
         teacher: "",
         assistantTeacher: "",
+        customTeacher: "",
+        customAssistantTeacher: ""
       },
-    ]
-    setSubjects(newSubjects)
-    updateSchoolData({ subjects: newSubjects })
+    ])
   }
 
   const removeSubject = (index: number) => {
-    const updatedSubjects = [...subjects]
-    updatedSubjects.splice(index, 1)
-    setSubjects(updatedSubjects)
-    updateSchoolData({ subjects: updatedSubjects })
+    setSubjects(prev => {
+      const updated = [...prev]
+      updated.splice(index, 1)
+      return updated
+    })
   }
 
   // Handle Excel data changes
   const handleExcelDataChange = (newData: any[]) => {
-    setSubjects(newData)
-    updateSchoolData({ subjects: newData })
+    const formattedData = newData.map(subject => ({
+      ...subject,
+      customTeacher: subject.teacher && !getTeachers().some(t => t.value === subject.teacher) ? subject.teacher : "",
+      customAssistantTeacher: subject.assistantTeacher && !getTeachers().some(t => t.value === subject.assistantTeacher) ? subject.assistantTeacher : ""
+    }))
+    setSubjects(formattedData)
     toast({
       title: "Success",
       description: "Subjects data updated",
@@ -86,25 +116,52 @@ export function SubjectsForm() {
   }
 
   // Get unique classes from school data
-  const getUniqueClasses = () => {
+  const getUniqueClasses = useMemo(() => {
     return [...new Set(classes.map(cls => cls.name))]
-  }
+  }, [classes])
 
   // Get sections for a specific class
-  const getSectionsForClass = (className: string) => {
+  const getSectionsForClass = useCallback((className: string) => {
     const classData = classes.find(c => c.name === className)
     if (!classData) return []
     return classData.sections.map(section => section.name)
-  }
+  }, [classes])
 
   // Get teachers (filter employees by teaching roles)
-  const getTeachers = () => {
+  const getTeachers = useMemo(() => {
     return employees
       .filter(emp => emp.department === "teaching" || emp.department === "academic")
       .map(emp => ({
-        value: emp.id || emp.name || `teacher-${emp.email}`, // Ensure non-empty value
-        label: emp.name
+        value: emp.id || emp.name || `teacher-${emp.email}`,
+        label: `${emp.name}${isTeacherAssigned(emp.id || emp.name) ? ' (Assigned)' : ''}`
       }))
+  }, [employees, subjects])
+
+  // Check if teacher is already assigned
+  const isTeacherAssigned = useCallback((teacherId: string) => {
+    return subjects.some(subject => 
+      subject.teacher === teacherId || subject.assistantTeacher === teacherId
+    )
+  }, [subjects])
+
+  const handleTeacherChange = (index: number, value: string) => {
+    if (value === "other") {
+      handleChange(index, "teacher", "other")
+      handleChange(index, "customTeacher", "")
+    } else {
+      handleChange(index, "teacher", value)
+      handleChange(index, "customTeacher", "")
+    }
+  }
+
+  const handleAssistantTeacherChange = (index: number, value: string) => {
+    if (value === "other") {
+      handleChange(index, "assistantTeacher", "other")
+      handleChange(index, "customAssistantTeacher", "")
+    } else {
+      handleChange(index, "assistantTeacher", value)
+      handleChange(index, "customAssistantTeacher", "")
+    }
   }
 
   if (!isMounted) return null
@@ -119,39 +176,38 @@ export function SubjectsForm() {
 
         <TabsContent value="individual" className="space-y-6 mt-6">
           {subjects.map((subject, index) => (
-            <div key={index} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">
+            <Card key={index} className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Subject {index + 1}</h3>
-                <button
-                  className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
                   onClick={() => removeSubject(index)}
                   disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
                   Remove
-                </button>
+                </Button>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Subject Code</label>
-                    <input
+                    <Label>Subject Code</Label>
+                    <Input
                       value={subject.code}
                       onChange={(e) => handleChange(index, "code", e.target.value)}
                       placeholder="Enter subject code"
-                      className="form-input w-full"
                       disabled={isLoading}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Subject Name</label>
-                    <input
+                    <Label>Subject Name</Label>
+                    <Input
                       value={subject.name}
                       onChange={(e) => handleChange(index, "name", e.target.value)}
                       placeholder="Enter subject name"
-                      className="form-input w-full"
                       disabled={isLoading}
                     />
                   </div>
@@ -159,27 +215,27 @@ export function SubjectsForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Class</label>
+                    <Label>Class</Label>
                     <Select
                       value={subject.class}
                       onValueChange={(value) => {
                         handleChange(index, "class", value)
-                        handleChange(index, "section", "") // Reset section when class changes
+                        handleChange(index, "section", "")
                       }}
                       disabled={isLoading || classes.length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getUniqueClasses().length > 0 ? (
-                          getUniqueClasses().map((cls, i) => (
-                            <SelectItem key={i} value={cls || `class-${i}`}> {/* Ensure non-empty value */}
+                        {getUniqueClasses.length > 0 ? (
+                          getUniqueClasses.map((cls, i) => (
+                            <SelectItem key={i} value={cls}>
                               {cls}
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="no-classes" disabled> {/* Changed from empty string */}
+                          <SelectItem value="no-classes" disabled>
                             No classes available
                           </SelectItem>
                         )}
@@ -188,30 +244,30 @@ export function SubjectsForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Section</label>
+                    <Label>Section</Label>
                     <Select
                       value={subject.section}
                       onValueChange={(value) => handleChange(index, "section", value)}
                       disabled={!subject.class || isLoading || getSectionsForClass(subject.class).length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select section" />
                       </SelectTrigger>
                       <SelectContent>
                         {subject.class ? (
                           getSectionsForClass(subject.class).length > 0 ? (
                             getSectionsForClass(subject.class).map((section, i) => (
-                              <SelectItem key={i} value={section || `section-${i}`}> {/* Ensure non-empty value */}
+                              <SelectItem key={i} value={section}>
                                 {section}
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="no-sections" disabled> {/* Changed from empty string */}
+                            <SelectItem value="no-sections" disabled>
                               No sections available for this class
                             </SelectItem>
                           )
                         ) : (
-                          <SelectItem value="select-class-first" disabled> {/* Changed from empty string */}
+                          <SelectItem value="select-class-first" disabled>
                             Select a class first
                           </SelectItem>
                         )}
@@ -222,69 +278,106 @@ export function SubjectsForm() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Teacher</label>
+                    <Label>Teacher</Label>
                     <Select
                       value={subject.teacher}
-                      onValueChange={(value) => handleChange(index, "teacher", value)}
+                      onValueChange={(value) => handleTeacherChange(index, value)}
                       disabled={isLoading || employees.length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select teacher" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getTeachers().length > 0 ? (
-                          getTeachers().map((teacher, i) => (
-                            <SelectItem key={i} value={teacher.value}> {/* Already ensured non-empty */}
-                              {teacher.label}
-                            </SelectItem>
-                          ))
+                        {getTeachers.length > 0 ? (
+                          <>
+                            {getTeachers.map((teacher, i) => (
+                              <SelectItem 
+                                key={i} 
+                                value={teacher.value}
+                                disabled={isTeacherAssigned(teacher.value) && teacher.value !== subject.teacher}
+                              >
+                                {teacher.label}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="other">Other (Please specify)</SelectItem>
+                          </>
                         ) : (
-                          <SelectItem value="no-teachers" disabled> {/* Changed from empty string */}
+                          <SelectItem value="no-teachers" disabled>
                             No teachers available
                           </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
+
+                    {subject.teacher === "other" && (
+                      <div className="mt-2">
+                        <Input
+                          value={subject.customTeacher || ""}
+                          onChange={(e) => handleChange(index, "customTeacher", e.target.value)}
+                          placeholder="Enter teacher name"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Assistant Teacher</label>
+                    <Label>Assistant Teacher</Label>
                     <Select
                       value={subject.assistantTeacher}
-                      onValueChange={(value) => handleChange(index, "assistantTeacher", value)}
+                      onValueChange={(value) => handleAssistantTeacherChange(index, value)}
                       disabled={isLoading || employees.length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select assistant teacher" />
                       </SelectTrigger>
                       <SelectContent>
-                        {getTeachers().length > 0 ? (
-                          getTeachers().map((teacher, i) => (
-                            <SelectItem key={i} value={teacher.value}> {/* Already ensured non-empty */}
-                              {teacher.label}
-                            </SelectItem>
-                          ))
+                        {getTeachers.length > 0 ? (
+                          <>
+                            {getTeachers.map((teacher, i) => (
+                              <SelectItem 
+                                key={i} 
+                                value={teacher.value}
+                                disabled={isTeacherAssigned(teacher.value) && teacher.value !== subject.assistantTeacher}
+                              >
+                                {teacher.label}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="other">Other (Please specify)</SelectItem>
+                          </>
                         ) : (
-                          <SelectItem value="no-assistants" disabled> {/* Changed from empty string */}
+                          <SelectItem value="no-assistants" disabled>
                             No teachers available
                           </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
+
+                    {subject.assistantTeacher === "other" && (
+                      <div className="mt-2">
+                        <Input
+                          value={subject.customAssistantTeacher || ""}
+                          onChange={(e) => handleChange(index, "customAssistantTeacher", e.target.value)}
+                          placeholder="Enter assistant teacher name"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
 
-          <button
-            className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
-            onClick={addSubject}
+          <Button 
+            variant="outline" 
+            onClick={addSubject} 
+            className="w-full"
             disabled={isLoading}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Another Subject
-          </button>
+          </Button>
         </TabsContent>
 
         <TabsContent value="bulk" className="space-y-6 mt-6">

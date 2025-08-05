@@ -80,6 +80,20 @@
                   "inListView": false,
                   "inListFilter": false
                 },
+                
+                {
+                  "id": "file",
+                  "name": "file_upload",
+                  "label": "File Upload",
+                  "type": "file",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+              
                 {
                   "id": "gender",
                   "name": "gender",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useContext, useEffect } from "react"
+import { useState, useContext, useEffect, useCallback } from "react"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/components/ui/use-toast"
 import dynamic from 'next/dynamic'
 
-// Fix for ExcelTable dynamic import
 const ExcelTable = dynamic(
   () => import('@/components/excel-import/excel-table').then(mod => mod.ExcelTable),
   { 
@@ -30,6 +29,8 @@ interface Employee {
   subDepartment: string
   class: string
   branch: string
+  customDepartment?: string
+  customSubDepartment?: string
 }
 
 export function EmployeesForm() {
@@ -53,22 +54,51 @@ export function EmployeesForm() {
     { id: "class", name: "Class", visible: true },
     { id: "branch", name: "Branch", visible: true },
   ]
-
-  useEffect(() => {
+ // Update the useEffect hooks like this:
+ useEffect(() => {
     setIsMounted(true)
-    setEmployees(schoolData.employees || [])
+    const savedEmployees = typeof window !== 'undefined' ? localStorage.getItem('employees') : null
+    const initialEmployees = savedEmployees ? JSON.parse(savedEmployees) : schoolData.employees || []
+    setEmployees(initialEmployees)
+    return () => setIsMounted(false)
   }, [schoolData.employees])
 
-  const handleChange = (index: number, field: keyof Employee, value: string) => {
-    const updatedEmployees = [...employees]
-    updatedEmployees[index] = { ...updatedEmployees[index], [field]: value }
-    setEmployees(updatedEmployees)
-    updateSchoolData({ employees: updatedEmployees })
-  }
+  // Persist to localStorage
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('employees', JSON.stringify(employees))
+    }
+  }, [employees, isMounted])
 
-  const addEmployee = () => {
-    const newEmployees = [
-      ...employees,
+  // Update context only when needed
+  useEffect(() => {
+    if (isMounted) {
+      const currentEmployees = JSON.stringify(schoolData.employees || [])
+      const newEmployees = JSON.stringify(employees)
+      if (currentEmployees !== newEmployees) {
+        updateSchoolData({ employees })
+      }
+    }
+  }, [employees, isMounted, schoolData.employees, updateSchoolData])
+
+  const handleChange = useCallback((index: number, field: keyof Employee, value: string) => {
+    setEmployees(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      
+      // Reset dependent fields when department changes
+      if (field === 'department') {
+        updated[index].subDepartment = ''
+        updated[index].customSubDepartment = ''
+      }
+      
+      return updated
+    })
+  }, [])
+
+  const addEmployee = useCallback(() => {
+    setEmployees(prev => [
+      ...prev,
       {
         name: "",
         email: "",
@@ -77,42 +107,62 @@ export function EmployeesForm() {
         subDepartment: "",
         class: "",
         branch: branches.length > 0 ? branches[0].id || branches[0].name : "",
+        customDepartment: "",
+        customSubDepartment: ""
       },
-    ]
-    setEmployees(newEmployees)
-    updateSchoolData({ employees: newEmployees })
-  }
+    ])
+  }, [branches])
 
-  const removeEmployee = (index: number) => {
-    const updatedEmployees = [...employees]
-    updatedEmployees.splice(index, 1)
-    setEmployees(updatedEmployees)
-    updateSchoolData({ employees: updatedEmployees })
-  }
+  const removeEmployee = useCallback((index: number) => {
+    setEmployees(prev => {
+      const updated = [...prev]
+      updated.splice(index, 1)
+      return updated
+    })
+  }, [])
 
-  const handleExcelDataChange = (newData: any[]) => {
-    setEmployees(newData)
-    updateSchoolData({ employees: newData })
+  const handleExcelDataChange = useCallback((newData: any[]) => {
+    const formattedData = newData.map(emp => ({
+      ...emp,
+      customDepartment: emp.department && !departments.some(d => d.id === emp.department || d.name === emp.department) ? emp.department : "",
+      customSubDepartment: emp.subDepartment && !getSubDepartments(emp.department).some(sd => sd.id === emp.subDepartment || sd.name === emp.subDepartment) ? emp.subDepartment : ""
+    }))
+    setEmployees(formattedData)
     toast({
       title: "Success",
       description: "Employees data updated",
     })
-  }
+  }, [departments])
 
-  const getSubDepartments = (departmentId: string) => {
+  const getSubDepartments = useCallback((departmentId: string) => {
+    if (!departmentId) return []
     return departments.filter(dept => 
       dept.parentDepartment === departmentId && 
       (dept.type === "sub" || dept.type === "department")
     )
-  }
+  }, [departments])
 
-  const getAcademicDepartments = () => {
+  const getAcademicDepartments = useCallback(() => {
     return departments.filter(dept => dept.isAcademic)
-  }
+  }, [departments])
 
-  const getNonAcademicDepartments = () => {
+  const getNonAcademicDepartments = useCallback(() => {
     return departments.filter(dept => !dept.isAcademic)
-  }
+  }, [departments])
+
+  const handleDepartmentChange = useCallback((index: number, value: string) => {
+    handleChange(index, "department", value)
+    if (value === "other") {
+      handleChange(index, "customDepartment", "")
+    }
+  }, [handleChange])
+
+  const handleSubDepartmentChange = useCallback((index: number, value: string) => {
+    handleChange(index, "subDepartment", value)
+    if (value === "other") {
+      handleChange(index, "customSubDepartment", "")
+    }
+  }, [handleChange])
 
   if (!isMounted) return null
 
@@ -220,15 +270,14 @@ export function EmployeesForm() {
                     <Label htmlFor={`department-${index}`}>Department</Label>
                     <Select
                       value={employee.department}
-                      onValueChange={(value) => {
-                        handleChange(index, "department", value)
-                        handleChange(index, "subDepartment", "")
-                      }}
-                      disabled={isLoading || departments.length === 0}
+                      onValueChange={(value) => handleDepartmentChange(index, value)}
+                      disabled={isLoading}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select department">
-                          {departments.find(d => d.id === employee.department || d.name === employee.department)?.name || "Select department"}
+                          {employee.department === "other" 
+                            ? "Other (Please specify)" 
+                            : departments.find(d => d.id === employee.department || d.name === employee.department)?.name || "Select department"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -253,39 +302,55 @@ export function EmployeesForm() {
                             {dept.name}
                           </SelectItem>
                         ))}
+                        
+                        <SelectItem value="other">Other (Please specify)</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {employee.department === "other" && (
+                      <div className="mt-2">
+                        <Input
+                          value={employee.customDepartment || ""}
+                          onChange={(e) => handleChange(index, "customDepartment", e.target.value)}
+                          placeholder="Enter department name"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor={`sub-department-${index}`}>Sub Department</Label>
                     <Select
                       value={employee.subDepartment}
-                      onValueChange={(value) => handleChange(index, "subDepartment", value)}
+                      onValueChange={(value) => handleSubDepartmentChange(index, value)}
                       disabled={!employee.department || isLoading}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select sub department">
-                          {getSubDepartments(employee.department).find(d => 
-                            d.id === employee.subDepartment || d.name === employee.subDepartment
-                          )?.name || "Select sub department"}
+                          {employee.subDepartment === "other" 
+                            ? "Other (Please specify)" 
+                            : getSubDepartments(employee.department).find(d => 
+                                d.id === employee.subDepartment || d.name === employee.subDepartment
+                              )?.name || "Select sub department"}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {employee.department ? (
                           getSubDepartments(employee.department).length > 0 ? (
-                            getSubDepartments(employee.department).map((subDept, i) => (
-                              <SelectItem 
-                                key={i} 
-                                value={subDept.id || subDept.name || `sub-dept-${i}`}
-                              >
-                                {subDept.name}
-                              </SelectItem>
-                            ))
+                            <>
+                              {getSubDepartments(employee.department).map((subDept, i) => (
+                                <SelectItem 
+                                  key={i} 
+                                  value={subDept.id || subDept.name || `sub-dept-${i}`}
+                                >
+                                  {subDept.name}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="other">Other (Please specify)</SelectItem>
+                            </>
                           ) : (
-                            <SelectItem value="no-sub-dept" disabled>
-                              No sub-departments available
-                            </SelectItem>
+                            <SelectItem value="other">Other (Please specify)</SelectItem>
                           )
                         ) : (
                           <SelectItem value="select-dept-first" disabled>
@@ -294,6 +359,17 @@ export function EmployeesForm() {
                         )}
                       </SelectContent>
                     </Select>
+
+                    {employee.subDepartment === "other" && (
+                      <div className="mt-2">
+                        <Input
+                          value={employee.customSubDepartment || ""}
+                          onChange={(e) => handleChange(index, "customSubDepartment", e.target.value)}
+                          placeholder="Enter sub-department name"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

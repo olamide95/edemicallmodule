@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,58 +11,44 @@ import { Search, Check, X } from "lucide-react"
 
 type Student = {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   admissionId: string
   studentId: string | null
   status: "pending" | "mapped" | "rejected"
+  admissionStatus: string
 }
 
 export function StudentIdMapper() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: "1",
-      name: "John Doe",
-      admissionId: "ADM-2023-001",
-      studentId: null,
-      status: "pending",
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      admissionId: "ADM-2023-002",
-      studentId: "STU-2023-002",
-      status: "mapped",
-    },
-    {
-      id: "3",
-      name: "Michael Johnson",
-      admissionId: "ADM-2023-003",
-      studentId: null,
-      status: "pending",
-    },
-    {
-      id: "4",
-      name: "Emily Williams",
-      admissionId: "ADM-2023-004",
-      studentId: null,
-      status: "rejected",
-    },
-    {
-      id: "5",
-      name: "Robert Brown",
-      admissionId: "ADM-2023-005",
-      studentId: null,
-      status: "pending",
-    },
-  ])
-
+  const [students, setStudents] = useState<Student[]>([])
   const [studentId, setStudentId] = useState("")
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
 
+  // Load admitted students from localStorage
+  useEffect(() => {
+    const savedResponses = localStorage.getItem('admissionFormResponses')
+    if (savedResponses) {
+      const allStudents = JSON.parse(savedResponses)
+      // Filter only admitted students and map to Student type
+      const admittedStudents = allStudents
+        .filter((student: any) => student.status === "Admitted")
+        .map((student: any) => ({
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          admissionId: student.admissionNumber || `ADM-${student.id.slice(0, 8)}`,
+          studentId: student.studentId || null,
+          status: student.studentId ? "mapped" : "pending",
+          admissionStatus: student.status
+        }))
+      setStudents(admittedStudents)
+    }
+  }, [])
+
   const filteredStudents = students.filter(
     (student) =>
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.admissionId.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
@@ -74,11 +60,21 @@ export function StudentIdMapper() {
   const handleMapStudentId = () => {
     if (!selectedStudent || !studentId.trim()) return
 
-    setStudents(
-      students.map((student) =>
-        student.id === selectedStudent.id ? { ...student, studentId, status: "mapped" } : student,
-      ),
+    // Update local state
+    const updatedStudents = students.map((student) =>
+      student.id === selectedStudent.id ? { ...student, studentId, status: "mapped" } : student
     )
+    setStudents(updatedStudents)
+
+    // Update localStorage
+    const savedResponses = localStorage.getItem('admissionFormResponses')
+    if (savedResponses) {
+      const allStudents = JSON.parse(savedResponses)
+      const updatedAllStudents = allStudents.map((student: any) => 
+        student.id === selectedStudent.id ? { ...student, studentId } : student
+      )
+      localStorage.setItem('admissionFormResponses', JSON.stringify(updatedAllStudents))
+    }
 
     setSelectedStudent(null)
     setStudentId("")
@@ -87,9 +83,21 @@ export function StudentIdMapper() {
   const handleRejectMapping = () => {
     if (!selectedStudent) return
 
-    setStudents(
-      students.map((student) => (student.id === selectedStudent.id ? { ...student, status: "rejected" } : student)),
+    // Update local state
+    const updatedStudents = students.map((student) =>
+      student.id === selectedStudent.id ? { ...student, status: "rejected" } : student
     )
+    setStudents(updatedStudents)
+
+    // Update localStorage
+    const savedResponses = localStorage.getItem('admissionFormResponses')
+    if (savedResponses) {
+      const allStudents = JSON.parse(savedResponses)
+      const updatedAllStudents = allStudents.map((student: any) => 
+        student.id === selectedStudent.id ? { ...student, status: "Rejected" } : student
+      )
+      localStorage.setItem('admissionFormResponses', JSON.stringify(updatedAllStudents))
+    }
 
     setSelectedStudent(null)
     setStudentId("")
@@ -128,13 +136,13 @@ export function StudentIdMapper() {
               {filteredStudents.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center">
-                    No students found
+                    No admitted students found
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredStudents.map((student) => (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell className="font-medium">{student.firstName} {student.lastName}</TableCell>
                     <TableCell>{student.admissionId}</TableCell>
                     <TableCell>{student.studentId || "-"}</TableCell>
                     <TableCell>
@@ -172,7 +180,7 @@ export function StudentIdMapper() {
               <div>
                 <div className="text-sm font-medium mb-1">Selected Student</div>
                 <div className="rounded-md border p-3">
-                  <div className="font-medium">{selectedStudent.name}</div>
+                  <div className="font-medium">{selectedStudent.firstName} {selectedStudent.lastName}</div>
                   <div className="text-sm text-muted-foreground">Admission ID: {selectedStudent.admissionId}</div>
                 </div>
               </div>
@@ -180,7 +188,7 @@ export function StudentIdMapper() {
                 <Label htmlFor="student-id">Permanent Student ID</Label>
                 <Input
                   id="student-id"
-                  placeholder="Enter student ID"
+                  placeholder="Enter student ID (e.g., STU-2023-001)"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                 />
@@ -189,7 +197,7 @@ export function StudentIdMapper() {
           ) : (
             <div className="flex h-[140px] items-center justify-center rounded-md border border-dashed">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Select a student from the list to map their ID</p>
+                <p className="text-sm text-muted-foreground">Select an admitted student to map their ID</p>
               </div>
             </div>
           )}

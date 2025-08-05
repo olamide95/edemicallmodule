@@ -1,5 +1,5 @@
 "use client"
-import { SetStateAction, useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -19,66 +19,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Paperclip, Plus } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-// Sample data for workflow statuses
-const initialWorkflow = [
-  {
-    id: 1,
-    title: "Form Submission",
-    status: "Form Submitted",
-    emailTitle: "Thank you for your application",
-    emailContent:
-      "Dear [Parent_Name],\n\nThank you for submitting an application for [Student_Name]. We have received your application and it is currently being processed.\n\nYou will be notified once your application moves to the next stage.\n\nBest regards,\nAdmissions Team",
-    attachments: [],
-    docType: "admission_form",
-    fieldTags: ["Parent_Name", "Student_Name", "Application_Date"],
-  },
-  {
-    id: 2,
-    title: "Assessment",
-    status: "Under Assessment",
-    emailTitle: "Assessment Scheduled",
-    emailContent:
-      "Dear [Parent_Name],\n\nWe are pleased to inform you that [Student_Name]'s application has moved to the assessment stage.\n\nPlease bring your child to the school on [Assessment_Date] at [Assessment_Time] for the assessment.\n\nBest regards,\nAdmissions Team",
-    attachments: ["Assessment_Guidelines.pdf"],
-    docType: "assessment",
-    fieldTags: ["Parent_Name", "Student_Name", "Assessment_Date", "Assessment_Time"],
-  },
-  {
-    id: 3,
-    title: "Admission Letter",
-    status: "Admission Letter Sent",
-    emailTitle: "Admission Offer",
-    emailContent:
-      "Dear [Parent_Name],\n\nWe are pleased to inform you that [Student_Name] has been offered admission to [Class_Name] for the [Academic_Year] academic year.\n\nPlease find attached the admission letter and payment instructions.\n\nBest regards,\nAdmissions Team",
-    attachments: ["Admission_Letter.pdf", "Payment_Instructions.pdf"],
-    docType: "admission_letter",
-    fieldTags: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Fee_Amount"],
-  },
-  {
-    id: 4,
-    title: "Payment",
-    status: "Awaiting Payment",
-    emailTitle: "Payment Reminder",
-    emailContent:
-      "Dear [Parent_Name],\n\nThis is a reminder that payment for [Student_Name]'s admission is due by [Payment_Deadline].\n\nPlease make the payment to secure your child's place.\n\nBest regards,\nAdmissions Team",
-    attachments: ["Payment_Instructions.pdf"],
-    docType: "payment",
-    fieldTags: ["Parent_Name", "Student_Name", "Payment_Deadline", "Fee_Amount"],
-  },
-  {
-    id: 5,
-    title: "Admission",
-    status: "Admitted",
-    emailTitle: "Welcome to Our School",
-    emailContent:
-      "Dear [Parent_Name],\n\nWe are delighted to welcome [Student_Name] to our school community. Your child has been successfully admitted to [Class_Name] for the [Academic_Year] academic year.\n\nPlease find attached important information about the orientation day and school calendar.\n\nBest regards,\nAdmissions Team",
-    attachments: ["Orientation_Guide.pdf", "School_Calendar.pdf"],
-    docType: "welcome",
-    fieldTags: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Orientation_Date"],
-  },
-]
+type WorkflowItem = {
+  id: number
+  title: string
+  status: string
+  emailTitle: string
+  emailContent: string
+  attachments: string[]
+  docType: string
+  fieldTags: string[]
+}
 
-// Sample data for document types and field tags
 const docTypes = [
   { id: "admission_form", name: "Admission Form" },
   { id: "assessment", name: "Assessment" },
@@ -87,9 +38,7 @@ const docTypes = [
   { id: "welcome", name: "Welcome" },
 ]
 
-type DocTypeKey = keyof typeof fieldTagsByDocType;
-
-const fieldTagsByDocType = {
+const fieldTagsByDocType: Record<string, string[]> = {
   admission_form: ["Parent_Name", "Student_Name", "Application_Date", "Class_Name"],
   assessment: ["Parent_Name", "Student_Name", "Assessment_Date", "Assessment_Time"],
   admission_letter: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Fee_Amount"],
@@ -98,18 +47,7 @@ const fieldTagsByDocType = {
 }
 
 export function SchoolWorkflow() {
-  const [workflow, setWorkflow] = useState(initialWorkflow)
-  type WorkflowItem = {
-    id: number
-    title: string
-    status: string
-    emailTitle: string
-    emailContent: string
-    attachments: string[]
-    docType: string
-    fieldTags: string[]
-  }
-
+  const [workflow, setWorkflow] = useState<WorkflowItem[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowItem | null>(null)
   const [emailTitle, setEmailTitle] = useState("")
   const [emailContent, setEmailContent] = useState("")
@@ -118,20 +56,86 @@ export function SchoolWorkflow() {
   const [attachments, setAttachments] = useState<string[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  // Load workflow from local storage
+  useEffect(() => {
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      
+      if (data.admissionSettings?.workflow) {
+        setWorkflow(data.admissionSettings.workflow)
+      } else {
+        // Initialize with default workflow if none exists
+        const defaultWorkflow = [
+          {
+            id: 1,
+            title: "Form Submission",
+            status: "Form Submitted",
+            emailTitle: "Thank you for your application",
+            emailContent: "Dear [Parent_Name],\n\nThank you for submitting an application for [Student_Name]. We have received your application and it is currently being processed.\n\nYou will be notified once your application moves to the next stage.\n\nBest regards,\nAdmissions Team",
+            attachments: [],
+            docType: "admission_form",
+            fieldTags: ["Parent_Name", "Student_Name", "Application_Date"],
+          },
+          {
+            id: 2,
+            title: "Assessment",
+            status: "Under Assessment",
+            emailTitle: "Assessment Scheduled",
+            emailContent: "Dear [Parent_Name],\n\nWe are pleased to inform you that [Student_Name]'s application has moved to the assessment stage.\n\nPlease bring your child to the school on [Assessment_Date] at [Assessment_Time] for the assessment.\n\nBest regards,\nAdmissions Team",
+            attachments: ["Assessment_Guidelines.pdf"],
+            docType: "assessment",
+            fieldTags: ["Parent_Name", "Student_Name", "Assessment_Date", "Assessment_Time"],
+          },
+          {
+            id: 3,
+            title: "Admission Letter",
+            status: "Admission Letter Sent",
+            emailTitle: "Admission Offer",
+            emailContent: "Dear [Parent_Name],\n\nWe are pleased to inform you that [Student_Name] has been offered admission to [Class_Name] for the [Academic_Year] academic year.\n\nPlease find attached the admission letter and payment instructions.\n\nBest regards,\nAdmissions Team",
+            attachments: ["Admission_Letter.pdf", "Payment_Instructions.pdf"],
+            docType: "admission_letter",
+            fieldTags: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Fee_Amount"],
+          },
+          {
+            id: 4,
+            title: "Payment",
+            status: "Awaiting Payment",
+            emailTitle: "Payment Reminder",
+            emailContent: "Dear [Parent_Name],\n\nThis is a reminder that payment for [Student_Name]'s admission is due by [Payment_Deadline].\n\nPlease make the payment to secure your child's place.\n\nBest regards,\nAdmissions Team",
+            attachments: ["Payment_Instructions.pdf"],
+            docType: "payment",
+            fieldTags: ["Parent_Name", "Student_Name", "Payment_Deadline", "Fee_Amount"],
+          },
+          {
+            id: 5,
+            title: "Admission",
+            status: "Admitted",
+            emailTitle: "Welcome to Our School",
+            emailContent: "Dear [Parent_Name],\n\nWe are delighted to welcome [Student_Name] to our school community. Your child has been successfully admitted to [Class_Name] for the [Academic_Year] academic year.\n\nPlease find attached important information about the orientation day and school calendar.\n\nBest regards,\nAdmissions Team",
+            attachments: ["Orientation_Guide.pdf", "School_Calendar.pdf"],
+            docType: "welcome",
+            fieldTags: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Orientation_Date"],
+          },
+        ]
+        setWorkflow(defaultWorkflow)
+      }
+    }
+  }, [])
+
   const handleEditEmail = (workflowItem: WorkflowItem) => {
-    if (!workflowItem) return
     setSelectedWorkflow(workflowItem)
     setEmailTitle(workflowItem.emailTitle)
-    setAvailableFieldTags(fieldTagsByDocType[workflowItem.docType as DocTypeKey] || [])
+    setEmailContent(workflowItem.emailContent)
     setSelectedDocType(workflowItem.docType)
-    setAvailableFieldTags(fieldTagsByDocType[workflowItem.docType as DocTypeKey] || [])
+    setAvailableFieldTags(fieldTagsByDocType[workflowItem.docType] || [])
     setAttachments(workflowItem.attachments)
     setIsDialogOpen(true)
   }
 
   const handleDocTypeChange = (value: string) => {
     setSelectedDocType(value)
-    setAvailableFieldTags(fieldTagsByDocType[value as DocTypeKey] || [])
+    setAvailableFieldTags(fieldTagsByDocType[value] || [])
   }
 
   const handleInsertFieldTag = (tag: string) => {
@@ -151,12 +155,25 @@ export function SchoolWorkflow() {
             fieldTags: availableFieldTags,
             attachments,
           }
-        : item,
+        : item
     )
 
     setWorkflow(updatedWorkflow)
+    
+    // Save to local storage
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        admissionSettings: {
+          ...data.admissionSettings,
+          workflow: updatedWorkflow
+        }
+      }))
+    }
+
     setIsDialogOpen(false)
-    // In a real app, you would save this to your backend
   }
 
   const handleAddAttachment = () => {

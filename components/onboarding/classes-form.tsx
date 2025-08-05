@@ -1,12 +1,16 @@
 "use client"
 
-import { useState, useContext, useEffect } from "react"
+import { useState, useContext, useEffect, useMemo, useCallback } from "react"
 import { OnboardingContext } from "@/components/onboarding/onboarding-layout"
 import { Plus, Trash2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ExcelTable } from "@/components/excel-import/excel-table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 interface ClassSection {
   id?: string
@@ -17,6 +21,8 @@ interface ClassSection {
   building: string
   floor: string
   wing: string
+  customTeacher?: string
+  customAssistantTeacher?: string
 }
 
 interface Class {
@@ -38,6 +44,7 @@ export function ClassesForm() {
   const branches = schoolData.branches || []
   const departments = schoolData.departments || []
   const employees = schoolData.employees || []
+  const subjects = schoolData.subjects || []
 
   // Excel table columns for bulk import
   const classColumns = [
@@ -59,26 +66,46 @@ export function ClassesForm() {
     setClasses(schoolData.classes || [])
   }, [schoolData.classes])
 
+  // Save to localStorage whenever classes change
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('classes', JSON.stringify(classes))
+    }
+  }, [classes, isMounted])
+
+  // Update context only when needed
+  useEffect(() => {
+    if (isMounted) {
+      const currentClasses = JSON.stringify(schoolData.classes || [])
+      const newClasses = JSON.stringify(classes)
+      if (currentClasses !== newClasses) {
+        updateSchoolData({ classes })
+      }
+    }
+  }, [classes, isMounted, schoolData.classes, updateSchoolData])
+
   const handleClassChange = (index: number, field: keyof Class, value: string) => {
-    const updatedClasses = [...classes]
-    updatedClasses[index] = { ...updatedClasses[index], [field]: value }
-    setClasses(updatedClasses)
-    updateSchoolData({ classes: updatedClasses })
+    setClasses(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
   }
 
   const handleSectionChange = (classIndex: number, sectionIndex: number, field: keyof ClassSection, value: string) => {
-    const updatedClasses = [...classes]
-    updatedClasses[classIndex].sections[sectionIndex] = {
-      ...updatedClasses[classIndex].sections[sectionIndex],
-      [field]: value,
-    }
-    setClasses(updatedClasses)
-    updateSchoolData({ classes: updatedClasses })
+    setClasses(prev => {
+      const updated = [...prev]
+      updated[classIndex].sections[sectionIndex] = {
+        ...updated[classIndex].sections[sectionIndex],
+        [field]: value
+      }
+      return updated
+    })
   }
 
   const addClass = () => {
-    const newClasses = [
-      ...classes,
+    setClasses(prev => [
+      ...prev,
       {
         name: "",
         department: "",
@@ -92,41 +119,46 @@ export function ClassesForm() {
             building: "",
             floor: "",
             wing: "",
-          },
-        ],
-      },
-    ]
-    setClasses(newClasses)
-    updateSchoolData({ classes: newClasses })
+            customTeacher: "",
+            customAssistantTeacher: ""
+          }
+        ]
+      }
+    ])
   }
 
   const removeClass = (index: number) => {
-    const updatedClasses = [...classes]
-    updatedClasses.splice(index, 1)
-    setClasses(updatedClasses)
-    updateSchoolData({ classes: updatedClasses })
+    setClasses(prev => {
+      const updated = [...prev]
+      updated.splice(index, 1)
+      return updated
+    })
   }
 
   const addSection = (classIndex: number) => {
-    const updatedClasses = [...classes]
-    updatedClasses[classIndex].sections.push({
-      name: "",
-      teacher: "",
-      assistantTeacher: "",
-      capacity: "",
-      building: "",
-      floor: "",
-      wing: "",
+    setClasses(prev => {
+      const updated = [...prev]
+      updated[classIndex].sections.push({
+        name: "",
+        teacher: "",
+        assistantTeacher: "",
+        capacity: "",
+        building: "",
+        floor: "",
+        wing: "",
+        customTeacher: "",
+        customAssistantTeacher: ""
+      })
+      return updated
     })
-    setClasses(updatedClasses)
-    updateSchoolData({ classes: updatedClasses })
   }
 
   const removeSection = (classIndex: number, sectionIndex: number) => {
-    const updatedClasses = [...classes]
-    updatedClasses[classIndex].sections.splice(sectionIndex, 1)
-    setClasses(updatedClasses)
-    updateSchoolData({ classes: updatedClasses })
+    setClasses(prev => {
+      const updated = [...prev]
+      updated[classIndex].sections.splice(sectionIndex, 1)
+      return updated
+    })
   }
 
   // Handle Excel data changes
@@ -150,14 +182,15 @@ export function ClassesForm() {
         capacity: row.capacity,
         building: row.building,
         floor: row.floor,
-        wing: row.wing
+        wing: row.wing,
+        customTeacher: row.teacher && !getTeachers().some(t => t.value === row.teacher) ? row.teacher : "",
+        customAssistantTeacher: row.assistantTeacher && !getTeachers().some(t => t.value === row.assistantTeacher) ? row.assistantTeacher : ""
       })
       
       return acc
     }, [] as Class[])
 
     setClasses(transformedData)
-    updateSchoolData({ classes: transformedData })
     toast({
       title: "Success",
       description: "Classes data updated",
@@ -165,13 +198,50 @@ export function ClassesForm() {
   }
 
   // Get teachers for dropdown
-  const getTeachers = () => {
+  const getTeachers = useMemo(() => {
     return employees
       .filter(emp => emp.department === "teaching" || emp.department === "academic")
       .map(emp => ({
-        value: emp.id || emp.name || `teacher-${emp.email}`, // Ensure non-empty value
-        label: emp.name
+        value: emp.id || emp.name || `teacher-${emp.email}`,
+        label: `${emp.name}${isTeacherAssigned(emp.id || emp.name) ? ' (Assigned)' : ''}`
       }))
+  }, [employees, classes, subjects])
+
+  // Check if teacher is already assigned
+  const isTeacherAssigned = useCallback((teacherId: string) => {
+    // Check in classes
+    const isAssignedInClasses = classes.some(cls => 
+      cls.sections.some(section => 
+        section.teacher === teacherId || section.assistantTeacher === teacherId
+      )
+    )
+    
+    // Check in subjects
+    const isAssignedInSubjects = subjects.some(subject => 
+      subject.teacher === teacherId || subject.assistantTeacher === teacherId
+    )
+    
+    return isAssignedInClasses || isAssignedInSubjects
+  }, [classes, subjects])
+
+  const handleTeacherChange = (classIndex: number, sectionIndex: number, value: string) => {
+    if (value === "other") {
+      handleSectionChange(classIndex, sectionIndex, "teacher", "other")
+      handleSectionChange(classIndex, sectionIndex, "customTeacher", "")
+    } else {
+      handleSectionChange(classIndex, sectionIndex, "teacher", value)
+      handleSectionChange(classIndex, sectionIndex, "customTeacher", "")
+    }
+  }
+
+  const handleAssistantTeacherChange = (classIndex: number, sectionIndex: number, value: string) => {
+    if (value === "other") {
+      handleSectionChange(classIndex, sectionIndex, "assistantTeacher", "other")
+      handleSectionChange(classIndex, sectionIndex, "customAssistantTeacher", "")
+    } else {
+      handleSectionChange(classIndex, sectionIndex, "assistantTeacher", value)
+      handleSectionChange(classIndex, sectionIndex, "customAssistantTeacher", "")
+    }
   }
 
   if (!isMounted) return null
@@ -186,54 +256,51 @@ export function ClassesForm() {
 
         <TabsContent value="individual" className="space-y-6 mt-6">
           {classes.map((cls, classIndex) => (
-            <div key={classIndex} className="p-6 bg-light-card dark:bg-dark-card rounded-md border border-divider">
+            <Card key={classIndex} className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Class</h3>
-                <button
-                  className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
                   onClick={() => removeClass(classIndex)}
                   disabled={isLoading}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
                   Remove Class
-                </button>
+                </Button>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Class Name</label>
-                    <input
+                    <Label>Class Name</Label>
+                    <Input
                       value={cls.name}
                       onChange={(e) => handleClassChange(classIndex, "name", e.target.value)}
                       placeholder="Enter class name"
-                      className="form-input w-full"
                       disabled={isLoading}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Department</label>
+                    <Label>Department</Label>
                     <Select
                       value={cls.department}
                       onValueChange={(value) => handleClassChange(classIndex, "department", value)}
                       disabled={isLoading || departments.length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
                       <SelectContent>
                         {departments.length > 0 ? (
                           departments.map((dept, i) => (
-                            <SelectItem 
-                              key={i} 
-                              value={dept.id || dept.name || `dept-${i}`} // Ensure non-empty value
-                            >
+                            <SelectItem key={i} value={dept.id || dept.name || `dept-${i}`}>
                               {dept.name}
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="no-dept" disabled> {/* Changed from empty string */}
+                          <SelectItem value="no-dept" disabled>
                             No departments available
                           </SelectItem>
                         )}
@@ -242,27 +309,24 @@ export function ClassesForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Branch</label>
+                    <Label>Branch</Label>
                     <Select
                       value={cls.branch}
                       onValueChange={(value) => handleClassChange(classIndex, "branch", value)}
                       disabled={isLoading || branches.length === 0}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select branch" />
                       </SelectTrigger>
                       <SelectContent>
                         {branches.length > 0 ? (
                           branches.map((branch, i) => (
-                            <SelectItem 
-                              key={i} 
-                              value={branch.id || branch.name || `branch-${i}`} // Ensure non-empty value
-                            >
+                            <SelectItem key={i} value={branch.id || branch.name || `branch-${i}`}>
                               {branch.name}
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="no-branch" disabled> {/* Changed from empty string */}
+                          <SelectItem value="no-branch" disabled>
                             No branches available
                           </SelectItem>
                         )}
@@ -275,160 +339,188 @@ export function ClassesForm() {
                   <h4 className="font-medium mb-4">Sections</h4>
 
                   {cls.sections.map((section, sectionIndex) => (
-                    <div key={sectionIndex} className="border rounded-md p-4 mb-4">
+                    <Card key={sectionIndex} className="p-4 mb-4">
                       <div className="flex justify-between items-center mb-4">
                         <h5 className="font-medium">Section {sectionIndex + 1}</h5>
                         {cls.sections.length > 1 && (
-                          <button
-                            className="bg-error text-white p-2 rounded-md flex items-center text-sm"
+                          <Button
+                            variant="destructive"
+                            size="sm"
                             onClick={() => removeSection(classIndex, sectionIndex)}
                             disabled={isLoading}
                           >
                             <Trash2 className="h-4 w-4 mr-1" />
                             Delete Section
-                          </button>
+                          </Button>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Section Name</label>
-                          <input
+                          <Label>Section Name</Label>
+                          <Input
                             value={section.name}
                             onChange={(e) => handleSectionChange(classIndex, sectionIndex, "name", e.target.value)}
                             placeholder="Enter section name"
-                            className="form-input w-full"
                             disabled={isLoading}
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Capacity</label>
-                          <input
+                          <Label>Capacity</Label>
+                          <Input
                             value={section.capacity}
                             onChange={(e) => handleSectionChange(classIndex, sectionIndex, "capacity", e.target.value)}
                             placeholder="Enter capacity"
                             type="number"
-                            className="form-input w-full"
                             disabled={isLoading}
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Teacher</label>
+                          <Label>Teacher</Label>
                           <Select
                             value={section.teacher}
-                            onValueChange={(value) => handleSectionChange(classIndex, sectionIndex, "teacher", value)}
+                            onValueChange={(value) => handleTeacherChange(classIndex, sectionIndex, value)}
                             disabled={isLoading || employees.length === 0}
                           >
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger>
                               <SelectValue placeholder="Select teacher" />
                             </SelectTrigger>
                             <SelectContent>
-                              {getTeachers().length > 0 ? (
-                                getTeachers().map((teacher, i) => (
-                                  <SelectItem 
-                                    key={i} 
-                                    value={teacher.value} // Already ensured non-empty in getTeachers()
-                                  >
-                                    {teacher.label}
-                                  </SelectItem>
-                                ))
+                              {getTeachers.length > 0 ? (
+                                <>
+                                  {getTeachers.map((teacher, i) => (
+                                    <SelectItem 
+                                      key={i} 
+                                      value={teacher.value}
+                                      disabled={isTeacherAssigned(teacher.value) && teacher.value !== section.teacher}
+                                    >
+                                      {teacher.label}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="other">Other (Please specify)</SelectItem>
+                                </>
                               ) : (
-                                <SelectItem value="no-teacher" disabled> {/* Changed from empty string */}
+                                <SelectItem value="no-teacher" disabled>
                                   No teachers available
                                 </SelectItem>
                               )}
                             </SelectContent>
                           </Select>
+
+                          {section.teacher === "other" && (
+                            <div className="mt-2">
+                              <Input
+                                value={section.customTeacher || ""}
+                                onChange={(e) => handleSectionChange(classIndex, sectionIndex, "customTeacher", e.target.value)}
+                                placeholder="Enter teacher name"
+                                disabled={isLoading}
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Assistant Teacher</label>
+                          <Label>Assistant Teacher</Label>
                           <Select
                             value={section.assistantTeacher}
-                            onValueChange={(value) => handleSectionChange(classIndex, sectionIndex, "assistantTeacher", value)}
+                            onValueChange={(value) => handleAssistantTeacherChange(classIndex, sectionIndex, value)}
                             disabled={isLoading || employees.length === 0}
                           >
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger>
                               <SelectValue placeholder="Select assistant teacher" />
                             </SelectTrigger>
                             <SelectContent>
-                              {getTeachers().length > 0 ? (
-                                getTeachers().map((teacher, i) => (
-                                  <SelectItem 
-                                    key={i} 
-                                    value={teacher.value} // Already ensured non-empty in getTeachers()
-                                  >
-                                    {teacher.label}
-                                  </SelectItem>
-                                ))
+                              {getTeachers.length > 0 ? (
+                                <>
+                                  {getTeachers.map((teacher, i) => (
+                                    <SelectItem 
+                                      key={i} 
+                                      value={teacher.value}
+                                      disabled={isTeacherAssigned(teacher.value) && teacher.value !== section.assistantTeacher}
+                                    >
+                                      {teacher.label}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="other">Other (Please specify)</SelectItem>
+                                </>
                               ) : (
-                                <SelectItem value="no-assistant" disabled> {/* Changed from empty string */}
+                                <SelectItem value="no-assistant" disabled>
                                   No teachers available
                                 </SelectItem>
                               )}
                             </SelectContent>
                           </Select>
+
+                          {section.assistantTeacher === "other" && (
+                            <div className="mt-2">
+                              <Input
+                                value={section.customAssistantTeacher || ""}
+                                onChange={(e) => handleSectionChange(classIndex, sectionIndex, "customAssistantTeacher", e.target.value)}
+                                placeholder="Enter assistant teacher name"
+                                disabled={isLoading}
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Building</label>
-                          <input
+                          <Label>Building</Label>
+                          <Input
                             value={section.building}
                             onChange={(e) => handleSectionChange(classIndex, sectionIndex, "building", e.target.value)}
                             placeholder="Enter building"
-                            className="form-input w-full"
                             disabled={isLoading}
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Floor</label>
-                          <input
+                          <Label>Floor</Label>
+                          <Input
                             value={section.floor}
                             onChange={(e) => handleSectionChange(classIndex, sectionIndex, "floor", e.target.value)}
                             placeholder="Enter floor"
-                            className="form-input w-full"
                             disabled={isLoading}
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium">Wing/Room</label>
-                          <input
+                          <Label>Wing/Room</Label>
+                          <Input
                             value={section.wing}
                             onChange={(e) => handleSectionChange(classIndex, sectionIndex, "wing", e.target.value)}
                             placeholder="Enter wing/room"
-                            className="form-input w-full"
                             disabled={isLoading}
                           />
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   ))}
 
-                  <button
-                    className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
+                  <Button
+                    variant="outline"
                     onClick={() => addSection(classIndex)}
+                    className="w-full"
                     disabled={isLoading}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Section
-                  </button>
+                  </Button>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
 
-          <button
-            className="w-full p-3 border border-divider rounded-md flex items-center justify-center hover:bg-secondary-bg"
+          <Button
+            variant="outline"
             onClick={addClass}
+            className="w-full"
             disabled={isLoading}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Another Class
-          </button>
+          </Button>
         </TabsContent>
 
         <TabsContent value="bulk" className="space-y-6 mt-6">
@@ -449,8 +541,8 @@ export function ClassesForm() {
                   department: cls.department,
                   branch: cls.branch,
                   capacity: section.capacity,
-                  teacher: section.teacher,
-                  assistantTeacher: section.assistantTeacher,
+                  teacher: section.teacher === "other" ? section.customTeacher : section.teacher,
+                  assistantTeacher: section.assistantTeacher === "other" ? section.customAssistantTeacher : section.assistantTeacher,
                   building: section.building,
                   floor: section.floor,
                   wing: section.wing

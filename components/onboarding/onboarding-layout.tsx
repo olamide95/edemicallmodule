@@ -252,7 +252,7 @@ export function OnboardingLayout({ children }: { children: React.ReactNode }) {
                         left: `calc(${startPercent}% + 20px)`, // Add 5px gap
                         width: width,
                         opacity: isCompleted ? 1 : 0,
-                        transform: "translateY(-4px)", // Move the line up by 2 times
+                        transform: "translateY(-10px)", // Changed from -4px to -50% to properly center
                       }}
                     ></div>
                   )

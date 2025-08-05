@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,92 +11,86 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Search, UserPlus } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-// Mock data for organization staff
-const organizationStaff = [
-  {
-    id: "1",
-    name: "John Smith",
-    role: "Teacher",
-    department: "Science",
-    email: "john.smith@school.edu",
-    phone: "+234 123 456 7890",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "2",
-    name: "Mary Johnson",
-    role: "Administrator",
-    department: "Admin",
-    email: "mary.johnson@school.edu",
-    phone: "+234 234 567 8901",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "3",
-    name: "David Williams",
-    role: "Security",
-    department: "Operations",
-    email: "david.williams@school.edu",
-    phone: "+234 345 678 9012",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "4",
-    name: "Patricia Brown",
-    role: "Teacher",
-    department: "Mathematics",
-    email: "patricia.brown@school.edu",
-    phone: "+234 456 789 0123",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "5",
-    name: "Michael Davis",
-    role: "Teacher",
-    department: "Physical Education",
-    email: "michael.davis@school.edu",
-    phone: "+234 567 890 1234",
-    photo: "/diverse-group-city.png",
-  },
-]
+interface StaffMember {
+  id: string
+  name: string
+  phone: string
+  email?: string
+  license?: string
+  bus: string
+  route: string
+  status: "active" | "inactive"
+  role: "administrator" | "driver"
+  photo?: string
+  licenseExpiry?: string
+  yearsOfExperience?: string
+  specialTraining?: boolean
+  previousExperience?: string
+  certifications?: string
+  responsibilities?: string
+}
 
-// Mock data for buses
-const buses = [
-  { id: "1", name: "Bus A", route: "North Route" },
-  { id: "2", name: "Bus B", route: "East Route" },
-  { id: "3", name: "Bus C", route: "West Route" },
-  { id: "4", name: "Bus D", route: "South Route" },
-  { id: "5", name: "Bus E", route: "Central Route" },
-]
+interface Bus {
+  id: string
+  name: string
+  route: string
+}
 
 export default function AddStaffPage() {
+  const router = useRouter()
   const [selectedTab, setSelectedTab] = useState("existing")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRole, setSelectedRole] = useState("all")
   const [selectedStaff, setSelectedStaff] = useState<string[]>([])
-  const [driverDetails, setDriverDetails] = useState({
-    licenseNumber: "",
+  const [staff, setStaff] = useState<StaffMember[]>([])
+  const [buses, setBuses] = useState<Bus[]>([])
+  const [employees, setEmployees] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const [staffData, setStaffData] = useState<Partial<StaffMember>>({
+    id: Date.now().toString(),
+    name: "",
+    phone: "",
+    email: "",
+    license: "",
+    bus: "",
+    route: "",
+    status: "active",
+    role: "driver",
+    photo: "",
     licenseExpiry: "",
     yearsOfExperience: "",
     specialTraining: false,
-  })
-  const [adminDetails, setAdminDetails] = useState({
     previousExperience: "",
     certifications: "",
-    responsibilities: "",
+    responsibilities: ""
   })
 
-  // Filter staff based on search and role filter
-  const filteredStaff = organizationStaff.filter((staff) => {
-    const matchesSearch =
-      staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.department.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    // Load data from localStorage
+    const savedStaff = localStorage.getItem('employees')
+    const savedBuses = localStorage.getItem('buses')
+    const savedEmployees = localStorage.getItem('employees')
 
-    const matchesRole = selectedRole === "all" || staff.role.toLowerCase() === selectedRole.toLowerCase()
+    if (savedStaff) setStaff(JSON.parse(savedStaff))
+    if (savedBuses) setBuses(JSON.parse(savedBuses))
+    if (savedEmployees) setEmployees(JSON.parse(savedEmployees))
+
+    setIsLoading(false)
+  }, [])
+
+  // Filter organization staff based on search and role filter
+  const filteredStaff = employees.filter((emp) => {
+    const matchesSearch =
+      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.department.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesRole = selectedRole === "all" || emp.role.toLowerCase() === selectedRole.toLowerCase()
 
     return matchesSearch && matchesRole
   })
@@ -111,20 +103,52 @@ export default function AddStaffPage() {
     }
   }
 
+  const handleChange = (field: keyof StaffMember, value: any) => {
+    setStaffData({
+      ...staffData,
+      [field]: value
+    })
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Submitting staff assignment", {
-      selectedStaff,
-      driverDetails,
-      adminDetails,
-    })
-    // Submit logic would go here
+    
+    // Create new staff member
+    const newStaff: StaffMember = {
+      id: staffData.id || Date.now().toString(),
+      name: staffData.name || "",
+      phone: staffData.phone || "",
+      email: staffData.email,
+      license: staffData.license,
+      bus: staffData.bus || "",
+      route: buses.find(b => b.id === staffData.bus)?.route || "",
+      status: staffData.status || "active",
+      role: staffData.role || "driver",
+      photo: staffData.photo,
+      licenseExpiry: staffData.licenseExpiry,
+      yearsOfExperience: staffData.yearsOfExperience,
+      specialTraining: staffData.specialTraining || false,
+      previousExperience: staffData.previousExperience,
+      certifications: staffData.certifications,
+      responsibilities: staffData.responsibilities
+    }
+
+    // Update staff in localStorage
+    const updatedStaff = [...staff, newStaff]
+    localStorage.setItem('employees', JSON.stringify(updatedStaff))
+    
+    // Redirect to staff page
+    router.push('/schoolbus/admin/staff')
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2">
-        <Link href="/staff">
+        <Link href="/schoolbus/admin/staff">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -230,7 +254,11 @@ export default function AddStaffPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="role-type">Staff Role</Label>
-                      <Select required>
+                      <Select 
+                        value={staffData.role}
+                        onValueChange={(value) => handleChange("role", value as "driver" | "administrator")}
+                        required
+                      >
                         <SelectTrigger id="role-type">
                           <SelectValue placeholder="Select role type" />
                         </SelectTrigger>
@@ -242,7 +270,11 @@ export default function AddStaffPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="assigned-bus">Assigned Bus</Label>
-                      <Select required>
+                      <Select 
+                        value={staffData.bus}
+                        onValueChange={(value) => handleChange("bus", value)}
+                        required
+                      >
                         <SelectTrigger id="assigned-bus">
                           <SelectValue placeholder="Select bus" />
                         </SelectTrigger>
@@ -273,8 +305,8 @@ export default function AddStaffPage() {
                             <Input
                               id="license-number"
                               placeholder="Enter driver license number"
-                              value={driverDetails.licenseNumber}
-                              onChange={(e) => setDriverDetails({ ...driverDetails, licenseNumber: e.target.value })}
+                              value={staffData.license || ""}
+                              onChange={(e) => handleChange("license", e.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
@@ -282,8 +314,8 @@ export default function AddStaffPage() {
                             <Input
                               id="license-expiry"
                               type="date"
-                              value={driverDetails.licenseExpiry}
-                              onChange={(e) => setDriverDetails({ ...driverDetails, licenseExpiry: e.target.value })}
+                              value={staffData.licenseExpiry || ""}
+                              onChange={(e) => handleChange("licenseExpiry", e.target.value)}
                             />
                           </div>
                         </div>
@@ -295,19 +327,15 @@ export default function AddStaffPage() {
                               type="number"
                               placeholder="Enter years of driving experience"
                               min="0"
-                              value={driverDetails.yearsOfExperience}
-                              onChange={(e) =>
-                                setDriverDetails({ ...driverDetails, yearsOfExperience: e.target.value })
-                              }
+                              value={staffData.yearsOfExperience || ""}
+                              onChange={(e) => handleChange("yearsOfExperience", e.target.value)}
                             />
                           </div>
                           <div className="flex items-center space-x-2 pt-6">
                             <Switch
                               id="special-training"
-                              checked={driverDetails.specialTraining}
-                              onCheckedChange={(checked) =>
-                                setDriverDetails({ ...driverDetails, specialTraining: checked })
-                              }
+                              checked={staffData.specialTraining || false}
+                              onCheckedChange={(checked) => handleChange("specialTraining", checked)}
                             />
                             <Label htmlFor="special-training">Has Special Children Transport Training</Label>
                           </div>
@@ -319,8 +347,8 @@ export default function AddStaffPage() {
                           <Input
                             id="previous-experience"
                             placeholder="Enter previous experience"
-                            value={adminDetails.previousExperience}
-                            onChange={(e) => setAdminDetails({ ...adminDetails, previousExperience: e.target.value })}
+                            value={staffData.previousExperience || ""}
+                            onChange={(e) => handleChange("previousExperience", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
@@ -328,8 +356,8 @@ export default function AddStaffPage() {
                           <Input
                             id="certifications"
                             placeholder="Enter certifications"
-                            value={adminDetails.certifications}
-                            onChange={(e) => setAdminDetails({ ...adminDetails, certifications: e.target.value })}
+                            value={staffData.certifications || ""}
+                            onChange={(e) => handleChange("certifications", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
@@ -337,8 +365,8 @@ export default function AddStaffPage() {
                           <Input
                             id="responsibilities"
                             placeholder="Enter responsibilities"
-                            value={adminDetails.responsibilities}
-                            onChange={(e) => setAdminDetails({ ...adminDetails, responsibilities: e.target.value })}
+                            value={staffData.responsibilities || ""}
+                            onChange={(e) => handleChange("responsibilities", e.target.value)}
                           />
                         </div>
                       </TabsContent>
@@ -366,34 +394,50 @@ export default function AddStaffPage() {
               <CardDescription>Add a new staff member to the system</CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <h3 className="text-lg font-medium">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="first-name">First Name</Label>
-                    <Input id="first-name" placeholder="Enter first name" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last-name">Last Name</Label>
-                    <Input id="last-name" placeholder="Enter last name" required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" placeholder="Enter email address" required />
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input 
+                      id="name" 
+                      placeholder="Enter full name" 
+                      required 
+                      value={staffData.name || ""}
+                      onChange={(e) => handleChange("name", e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" placeholder="Enter phone number" required />
+                    <Input 
+                      id="phone" 
+                      placeholder="Enter phone number" 
+                      required 
+                      value={staffData.phone || ""}
+                      onChange={(e) => handleChange("phone", e.target.value)}
+                    />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="Enter email address" 
+                    value={staffData.email || ""}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
-                    <Select required>
+                    <Select 
+                      value={staffData.role}
+                      onValueChange={(value) => handleChange("role", value as "driver" | "administrator")}
+                      required
+                    >
                       <SelectTrigger id="role">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
@@ -404,25 +448,13 @@ export default function AddStaffPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Select required>
-                      <SelectTrigger id="department">
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="transport">Transport</SelectItem>
-                        <SelectItem value="admin">Administration</SelectItem>
-                        <SelectItem value="operations">Operations</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="assigned-bus-new">Assigned Bus</Label>
-                    <Select required>
-                      <SelectTrigger id="assigned-bus-new">
+                    <Label htmlFor="assigned-bus">Assigned Bus</Label>
+                    <Select 
+                      value={staffData.bus}
+                      onValueChange={(value) => handleChange("bus", value)}
+                      required
+                    >
+                      <SelectTrigger id="assigned-bus">
                         <SelectValue placeholder="Select bus" />
                       </SelectTrigger>
                       <SelectContent>
@@ -434,19 +466,31 @@ export default function AddStaffPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="start-date">Start Date</Label>
-                    <Input id="start-date" type="date" required />
-                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="photo">Staff Photo</Label>
                   <div className="flex items-center gap-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarFallback>ST</AvatarFallback>
+                      <AvatarImage src={staffData.photo} />
+                      <AvatarFallback>
+                        {staffData.name?.substring(0, 2).toUpperCase() || "ST"}
+                      </AvatarFallback>
                     </Avatar>
-                    <Input id="photo" type="file" className="max-w-sm" />
+                    <Input 
+                      id="photo" 
+                      type="file" 
+                      className="max-w-sm" 
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            handleChange("photo", event.target?.result as string)
+                          }
+                          reader.readAsDataURL(e.target.files[0])
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -454,50 +498,81 @@ export default function AddStaffPage() {
 
                 <div>
                   <h3 className="text-lg font-medium mb-4">Role-Specific Details</h3>
-                  <Tabs defaultValue="driver-new" className="w-full">
+                  <Tabs defaultValue="driver" className="w-full">
                     <TabsList className="grid grid-cols-2 mb-4">
-                      <TabsTrigger value="driver-new">Driver Details</TabsTrigger>
-                      <TabsTrigger value="admin-new">Administrator Details</TabsTrigger>
+                      <TabsTrigger value="driver">Driver Details</TabsTrigger>
+                      <TabsTrigger value="admin">Administrator Details</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="driver-new" className="space-y-4">
+                    <TabsContent value="driver" className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="license-number-new">License Number</Label>
-                          <Input id="license-number-new" placeholder="Enter driver license number" />
+                          <Label htmlFor="license-number">License Number</Label>
+                          <Input 
+                            id="license-number" 
+                            placeholder="Enter driver license number" 
+                            value={staffData.license || ""}
+                            onChange={(e) => handleChange("license", e.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="license-expiry-new">License Expiry Date</Label>
-                          <Input id="license-expiry-new" type="date" />
+                          <Label htmlFor="license-expiry">License Expiry Date</Label>
+                          <Input 
+                            id="license-expiry" 
+                            type="date" 
+                            value={staffData.licenseExpiry || ""}
+                            onChange={(e) => handleChange("licenseExpiry", e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="years-experience-new">Years of Experience</Label>
+                          <Label htmlFor="years-experience">Years of Experience</Label>
                           <Input
-                            id="years-experience-new"
+                            id="years-experience"
                             type="number"
                             min="0"
                             placeholder="Enter years of experience"
+                            value={staffData.yearsOfExperience || ""}
+                            onChange={(e) => handleChange("yearsOfExperience", e.target.value)}
                           />
                         </div>
                         <div className="flex items-center space-x-2 pt-6">
-                          <Switch id="special-training-new" />
-                          <Label htmlFor="special-training-new">Has Special Children Transport Training</Label>
+                          <Switch
+                            id="special-training"
+                            checked={staffData.specialTraining || false}
+                            onCheckedChange={(checked) => handleChange("specialTraining", checked)}
+                          />
+                          <Label htmlFor="special-training">Has Special Children Transport Training</Label>
                         </div>
                       </div>
                     </TabsContent>
-                    <TabsContent value="admin-new" className="space-y-4">
+                    <TabsContent value="admin" className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="previous-experience-new">Previous Experience</Label>
-                        <Input id="previous-experience-new" placeholder="Enter previous experience" />
+                        <Label htmlFor="previous-experience">Previous Experience</Label>
+                        <Input
+                          id="previous-experience"
+                          placeholder="Enter previous experience"
+                          value={staffData.previousExperience || ""}
+                          onChange={(e) => handleChange("previousExperience", e.target.value)}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="certifications-new">Certifications</Label>
-                        <Input id="certifications-new" placeholder="Enter certifications" />
+                        <Label htmlFor="certifications">Certifications</Label>
+                        <Input
+                          id="certifications"
+                          placeholder="Enter certifications"
+                          value={staffData.certifications || ""}
+                          onChange={(e) => handleChange("certifications", e.target.value)}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="responsibilities-new">Responsibilities</Label>
-                        <Input id="responsibilities-new" placeholder="Enter responsibilities" />
+                        <Label htmlFor="responsibilities">Responsibilities</Label>
+                        <Input
+                          id="responsibilities"
+                          placeholder="Enter responsibilities"
+                          value={staffData.responsibilities || ""}
+                          onChange={(e) => handleChange("responsibilities", e.target.value)}
+                        />
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -506,9 +581,9 @@ export default function AddStaffPage() {
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline" asChild>
-                <Link href="/staff">Cancel</Link>
+                <Link href="/schoolbus/admin/staff">Cancel</Link>
               </Button>
-              <Button type="submit">
+              <Button type="submit" onClick={handleSubmit}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Add Staff
               </Button>

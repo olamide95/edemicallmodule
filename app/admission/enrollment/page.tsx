@@ -8,7 +8,6 @@ import { AdmissionStatusTable } from "@/components/dashboard/admission-status-ta
 import Image from "next/image"
 import { ChevronRight } from "lucide-react"
 
-
 export default function StudentInformationPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 

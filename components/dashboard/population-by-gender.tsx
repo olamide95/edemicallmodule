@@ -28,7 +28,7 @@ const sessionData: Record<SessionKey, { name: string; label: string; value: numb
     { name: "Female", label: "female", value: 65, color: "#8c57ff" },
   ],
 }
-  // Remove this duplicate state declaration
+
 export function PopulationByGender() {
   const [isMounted, setIsMounted] = useState(false)
   const [selectedSession, setSelectedSession] = useState<SessionKey>("This Term")
@@ -49,7 +49,6 @@ export function PopulationByGender() {
   useEffect(() => {
     setIsMounted(true)
   }, [])
-
 
   const data = sessionData[selectedSession]
   const chartOptions: ApexOptions = {
@@ -141,25 +140,27 @@ export function PopulationByGender() {
     <Card className="overflow-hidden shadow-sm">
       <div className="p-6">
         <div className="relative mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2">
             <h3 className="text-xl font-semibold">{sessionTitle}</h3>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 text-sm outline-none">
-                <span>{selectedSession}</span>
-                <ChevronDown className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(Object.keys(sessionData) as SessionKey[]).map((session) => (
-                  <DropdownMenuItem
-                    key={session}
-                    onClick={() => setSelectedSession(session)}
-                    className={selectedSession === session ? "bg-muted" : ""}
-                  >
-                    {session}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-1 text-sm outline-none">
+                  <span>{selectedSession}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {(Object.keys(sessionData) as SessionKey[]).map((session) => (
+                    <DropdownMenuItem
+                      key={session}
+                      onClick={() => setSelectedSession(session)}
+                      className={selectedSession === session ? "bg-muted" : ""}
+                    >
+                      {session}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <div className="absolute top-[14px] left-0 w-full h-[1px] bg-gray-200">
             <div className="absolute top-0 left-0 w-12 h-[2px] bg-[#16b1ff]"></div>

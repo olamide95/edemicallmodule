@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowUpDown, MoreHorizontal, Download, ChevronRight, Eye, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,85 +18,37 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 
-// Sample data - in a real app this would come from your API
-const admissionData = [
-  {
-    id: "ADM001",
-    studentFirstName: "John",
-    studentLastName: "Smith",
-    parentName: "David Smith",
-    enrollmentFormNumber: "EF-2023-001",
-    status: "Under Assessment",
-    admissionClass: "Grade 1",
-    dateOfBirth: "2017-05-15",
-    age: 6,
-    parentContactNumber: "+1 234-567-8901",
-    admissionState: "Under Assessment",
-    marketingMedium: "Google Ad",
-  },
-  {
-    id: "ADM002",
-    studentFirstName: "Emma",
-    studentLastName: "Johnson",
-    parentName: "Michael Johnson",
-    enrollmentFormNumber: "EF-2023-002",
-    status: "Form Submitted",
-    admissionClass: "Nursery 2",
-    dateOfBirth: "2019-08-21",
-    age: 4,
-    parentContactNumber: "+1 234-567-8902",
-    admissionState: "Form Submitted",
-    marketingMedium: "Referral",
-  },
-  {
-    id: "ADM003",
-    studentFirstName: "Olivia",
-    studentLastName: "Williams",
-    parentName: "Jennifer Williams",
-    enrollmentFormNumber: "EF-2023-003",
-    status: "Admission Letter Sent",
-    admissionClass: "Grade 3",
-    dateOfBirth: "2015-03-10",
-    age: 8,
-    parentContactNumber: "+1 234-567-8903",
-    admissionState: "Admission Letter Sent",
-    marketingMedium: "Facebook",
-  },
-  {
-    id: "ADM004",
-    studentFirstName: "Sophia",
-    studentLastName: "Brown",
-    parentName: "Robert Brown",
-    enrollmentFormNumber: "EF-2023-004",
-    status: "Awaiting Payment",
-    admissionClass: "Toddlers",
-    dateOfBirth: "2021-01-05",
-    age: 2,
-    parentContactNumber: "+1 234-567-8904",
-    admissionState: "Awaiting Payment",
-    marketingMedium: "Google Search",
-  },
-  {
-    id: "ADM005",
-    studentFirstName: "William",
-    studentLastName: "Jones",
-    parentName: "Patricia Jones",
-    enrollmentFormNumber: "EF-2023-005",
-    status: "Admitted",
-    admissionClass: "Grade 2",
-    dateOfBirth: "2016-11-28",
-    age: 7,
-    parentContactNumber: "+1 234-567-8905",
-    admissionState: "Admitted",
-    marketingMedium: "Edutech site",
-  },
-]
-  
+// Helper function to calculate age from date of birth
+function calculateAge(dob: string) {
+  if (!dob) return 'N/A'
+  const birthDate = new Date(dob)
+  const diff = Date.now() - birthDate.getTime()
+  const ageDate = new Date(diff)
+  return Math.abs(ageDate.getUTCFullYear() - 1970)
+}
+
+// Helper function to get parent name
+function getParentName(response: any) {
+  if (response.fatherName && response.motherName) {
+    return `${response.fatherName} & ${response.motherName}`
+  }
+  return response.fatherName || response.motherName || 'Not specified'
+}
+
 export function AdmissionStatusTable() {
   const router = useRouter()
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [selectedRows, setSelectedRows] = useState<string[]>([])
+  const [admissionData, setAdmissionData] = useState<any[]>([])
+
+  // Load data from localStorage
+  useEffect(() => {
+    const savedResponses = localStorage.getItem('admissionFormResponses')
+    if (savedResponses) {
+      setAdmissionData(JSON.parse(savedResponses))
+    }
+  }, [])
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -111,15 +63,15 @@ export function AdmissionStatusTable() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Form Submitted":
-        return <Badge className="bg-info-light text-info">Form Submitted</Badge>
+        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">Form Submitted</Badge>
       case "Under Assessment":
-        return <Badge className="bg-warning-light text-warning">Under Assessment</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">Under Assessment</Badge>
       case "Admission Letter Sent":
-        return <Badge className="bg-primary-light text-primary">Letter Sent</Badge>
+        return <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">Letter Sent</Badge>
       case "Awaiting Payment":
-        return <Badge className="bg-secondary-light text-secondary">Awaiting Payment</Badge>
+        return <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400">Awaiting Payment</Badge>
       case "Admitted":
-        return <Badge className="bg-success-light text-success">Admitted</Badge>
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">Admitted</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -143,23 +95,45 @@ export function AdmissionStatusTable() {
     router.push("/admission/form")
   }
 
-  // Bulk action handlers
-  const handleBulkDelete = () => {
-    // Implement bulk delete logic here
-    console.log("Deleting selected rows:", selectedRows)
-    // In a real app, you would call an API here
-    setSelectedRows([])
+  // Update status handler
+  const updateStatus = (id: string, newStatus: string) => {
+    const updatedData = admissionData.map(item => 
+      item.id === id ? { ...item, status: newStatus, admissionState: newStatus } : item
+    )
+    setAdmissionData(updatedData)
+    localStorage.setItem('admissionFormResponses', JSON.stringify(updatedData))
   }
 
+  // Bulk status update
   const handleBulkStatusChange = (newStatus: string) => {
-    // Implement bulk status change logic here
-    console.log(`Changing status to ${newStatus} for:`, selectedRows)
-    // In a real app, you would call an API here
+    const updatedData = admissionData.map(item => 
+      selectedRows.includes(item.id) ? { ...item, status: newStatus, admissionState: newStatus } : item
+    )
+    setAdmissionData(updatedData)
+    setSelectedRows([])
+    localStorage.setItem('admissionFormResponses', JSON.stringify(updatedData))
   }
 
+  // Delete handler
+  const handleDelete = (id: string) => {
+    const updatedData = admissionData.filter(item => item.id !== id)
+    setAdmissionData(updatedData)
+    localStorage.setItem('admissionFormResponses', JSON.stringify(updatedData))
+  }
+
+  // Bulk delete
+  const handleBulkDelete = () => {
+    const updatedData = admissionData.filter(item => !selectedRows.includes(item.id))
+    setAdmissionData(updatedData)
+    setSelectedRows([])
+    localStorage.setItem('admissionFormResponses', JSON.stringify(updatedData))
+  }
+
+  // Bulk export
   const handleBulkExport = () => {
-    // Implement bulk export logic here
-    console.log("Exporting selected rows:", selectedRows)
+    const selectedData = admissionData.filter(item => selectedRows.includes(item.id))
+    console.log("Exporting selected rows:", selectedData)
+    // In a real app, you would implement actual export functionality here
   }
 
   return (
@@ -243,12 +217,12 @@ export function AdmissionStatusTable() {
                   </Button>
                 </TableHead>
                 <TableHead>Parent Name</TableHead>
-                <TableHead>Enrollment #</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Class</TableHead>
                 <TableHead>Age</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Marketing</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Submitted On</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -259,33 +233,42 @@ export function AdmissionStatusTable() {
                     <Checkbox
                       checked={selectedRows.includes(row.id)}
                       onCheckedChange={() => toggleRowSelection(row.id)}
-                      aria-label={`Select ${row.studentFirstName} ${row.studentLastName}`}
                     />
                   </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-9 w-9">
                         <AvatarFallback>
-                          {row.studentFirstName.charAt(0)}{row.studentLastName.charAt(0)}
+                          {row.firstName?.charAt(0)}{row.lastName?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <span>
-                        {row.studentFirstName} {row.studentLastName}
+                        {row.firstName} {row.lastName}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>{row.parentName}</TableCell>
-                  <TableCell>{row.enrollmentFormNumber}</TableCell>
-                  <TableCell>{getStatusBadge(row.admissionState)}</TableCell>
-                  <TableCell>{row.admissionClass}</TableCell>
                   <TableCell>
-                    {row.age} yrs
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(row.dateOfBirth).toLocaleDateString()}
-                    </div>
+                    {getParentName(row)}
                   </TableCell>
-                  <TableCell>{row.parentContactNumber}</TableCell>
-                  <TableCell>{row.marketingMedium}</TableCell>
+                  <TableCell>{row.class || 'Not specified'}</TableCell>
+                  <TableCell>
+                    {row.age || calculateAge(row.dateOfBirth)}
+                    {row.dateOfBirth && (
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(row.dateOfBirth).toLocaleDateString()}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {row.fatherPhone || row.motherPhone || 'Not specified'}
+                  </TableCell>
+                  <TableCell>
+                    {row.address ? `${row.address}, ${row.city}` : 'Not specified'}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(row.status)}</TableCell>
+                  <TableCell>
+                    {new Date(row.submittedAt).toLocaleDateString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <TooltipProvider>
                       <div className="flex justify-end space-x-1">
@@ -327,7 +310,12 @@ export function AdmissionStatusTable() {
                             <DropdownMenuItem>Edit Details</DropdownMenuItem>
                             <DropdownMenuItem>Send Email</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">Cancel Application</DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDelete(row.id)}
+                            >
+                              Cancel Application
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

@@ -16,7 +16,9 @@ export function OnboardingComplete() {
   const { schoolData } = useContext(OnboardingContext)
 
   // Safely get admin name from the head office branch
-  const adminName = schoolData?.branches?.[0]?.admin || "Administrator"
+  const adminName = schoolData?.branches?.[0]?.admin?.name || 
+                    schoolData?.branches?.[0]?.admin || 
+                    "Administrator"
   const schoolName = schoolData?.name || "your school"
 
   useEffect(() => {

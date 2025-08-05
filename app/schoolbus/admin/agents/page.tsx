@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,59 +21,65 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Mock data for agents
-const agents = [
-  {
-    id: "1",
-    name: "John Doe",
-    relationship: "Father",
-    phone: "+234 123 456 7890",
-    email: "john.doe@example.com",
-    students: ["Alice Doe", "Bob Doe"],
-    type: "pickup",
-    status: "active",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    relationship: "Mother",
-    phone: "+234 234 567 8901",
-    email: "jane.smith@example.com",
-    students: ["Charlie Smith"],
-    type: "both",
-    status: "active",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "3",
-    name: "Michael Johnson",
-    relationship: "Uncle",
-    phone: "+234 345 678 9012",
-    email: "michael.johnson@example.com",
-    students: ["Diana Johnson"],
-    type: "dropoff",
-    status: "active",
-    photo: "/diverse-group-city.png",
-  },
-  {
-    id: "4",
-    name: "Sarah Williams",
-    relationship: "Grandmother",
-    phone: "+234 456 789 0123",
-    email: "sarah.williams@example.com",
-    students: ["Emma Williams", "Frank Williams"],
-    type: "both",
-    status: "inactive",
-    photo: "/diverse-group-city.png",
-  },
-]
+interface Agent {
+  id: string
+  name: string
+  relationship: string
+  phone: string
+  email: string
+  students: string[]
+  type: "pickup" | "dropoff" | "both"
+  status: "active" | "inactive"
+  photo?: string
+}
+
+interface Student {
+  id: string
+  firstName: string
+  lastName: string
+  admissionId: string
+  status: string
+}
 
 export default function AdminAgentsPage() {
   const [isAddAgentOpen, setIsAddAgentOpen] = useState(false)
   const [isViewAgentOpen, setIsViewAgentOpen] = useState(false)
-  const [selectedAgent, setSelectedAgent] = useState<any>(null)
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [newAgent, setNewAgent] = useState<Partial<Agent>>({
+    name: "",
+    relationship: "",
+    phone: "",
+    email: "",
+    students: [],
+    type: "pickup",
+    status: "active"
+  })
+
+  // Load agents and students from localStorage
+  useEffect(() => {
+    const savedAgents = localStorage.getItem('pickupAgents')
+    if (savedAgents) {
+      setAgents(JSON.parse(savedAgents))
+    }
+
+    const savedResponses = localStorage.getItem('admissionFormResponses')
+    if (savedResponses) {
+      const allStudents = JSON.parse(savedResponses)
+      const admittedStudents = allStudents
+        .filter((student: any) => student.status === "Admitted")
+        .map((student: any) => ({
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          admissionId: student.admissionNumber || `ADM-${student.id.slice(0, 8)}`,
+          status: student.status
+        }))
+      setStudents(admittedStudents)
+    }
+  }, [])
 
   const filteredAgents = agents.filter(
     (agent) =>
@@ -81,9 +87,57 @@ export default function AdminAgentsPage() {
       agent.students.some((student) => student.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
-  const handleViewAgent = (agent: any) => {
+  const handleViewAgent = (agent: Agent) => {
     setSelectedAgent(agent)
     setIsViewAgentOpen(true)
+  }
+
+  const handleAddAgent = () => {
+    if (!newAgent.name || !newAgent.relationship || !newAgent.phone || !newAgent.email || newAgent.students?.length === 0) {
+      alert("Please fill all required fields")
+      return
+    }
+
+    const agentToAdd: Agent = {
+      id: Date.now().toString(),
+      name: newAgent.name || "",
+      relationship: newAgent.relationship || "",
+      phone: newAgent.phone || "",
+      email: newAgent.email || "",
+      students: newAgent.students || [],
+      type: newAgent.type || "pickup",
+      status: newAgent.status || "active",
+      photo: newAgent.photo
+    }
+
+    const updatedAgents = [...agents, agentToAdd]
+    setAgents(updatedAgents)
+    localStorage.setItem('pickupAgents', JSON.stringify(updatedAgents))
+    
+    setIsAddAgentOpen(false)
+    setNewAgent({
+      name: "",
+      relationship: "",
+      phone: "",
+      email: "",
+      students: [],
+      type: "pickup",
+      status: "active"
+    })
+  }
+
+  const handleDeleteAgent = (id: string) => {
+    const updatedAgents = agents.filter(agent => agent.id !== id)
+    setAgents(updatedAgents)
+    localStorage.setItem('pickupAgents', JSON.stringify(updatedAgents))
+  }
+
+  const handleUpdateAgentStatus = (id: string, status: "active" | "inactive") => {
+    const updatedAgents = agents.map(agent => 
+      agent.id === id ? { ...agent, status } : agent
+    )
+    setAgents(updatedAgents)
+    localStorage.setItem('pickupAgents', JSON.stringify(updatedAgents))
   }
 
   return (
@@ -119,12 +173,20 @@ export default function AdminAgentsPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="agent-name">Full Name</Label>
-                  <Input id="agent-name" placeholder="Enter full name" />
+                  <Label htmlFor="agent-name">Full Name *</Label>
+                  <Input 
+                    id="agent-name" 
+                    placeholder="Enter full name" 
+                    value={newAgent.name}
+                    onChange={(e) => setNewAgent({...newAgent, name: e.target.value})}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="agent-relationship">Relationship</Label>
-                  <Select>
+                  <Label htmlFor="agent-relationship">Relationship *</Label>
+                  <Select
+                    value={newAgent.relationship}
+                    onValueChange={(value) => setNewAgent({...newAgent, relationship: value})}
+                  >
                     <SelectTrigger id="agent-relationship">
                       <SelectValue placeholder="Select relationship" />
                     </SelectTrigger>
@@ -144,33 +206,80 @@ export default function AdminAgentsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="agent-phone">Phone Number</Label>
-                  <Input id="agent-phone" placeholder="Enter phone number" />
+                  <Label htmlFor="agent-phone">Phone Number *</Label>
+                  <Input 
+                    id="agent-phone" 
+                    placeholder="Enter phone number" 
+                    value={newAgent.phone}
+                    onChange={(e) => setNewAgent({...newAgent, phone: e.target.value})}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="agent-email">Email Address</Label>
-                  <Input id="agent-email" type="email" placeholder="Enter email address" />
+                  <Label htmlFor="agent-email">Email Address *</Label>
+                  <Input 
+                    id="agent-email" 
+                    type="email" 
+                    placeholder="Enter email address" 
+                    value={newAgent.email}
+                    onChange={(e) => setNewAgent({...newAgent, email: e.target.value})}
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="agent-student">Student</Label>
-                <Select>
+                <Label htmlFor="agent-student">Student *</Label>
+                <Select
+                  onValueChange={(value) => {
+                    setNewAgent({
+                      ...newAgent,
+                      students: [...(newAgent.students || []), value]
+                    })
+                  }}
+                >
                   <SelectTrigger id="agent-student">
                     <SelectValue placeholder="Select student" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="alice-doe">Alice Doe</SelectItem>
-                    <SelectItem value="bob-doe">Bob Doe</SelectItem>
-                    <SelectItem value="charlie-smith">Charlie Smith</SelectItem>
-                    <SelectItem value="diana-johnson">Diana Johnson</SelectItem>
+                    {students.map((student) => (
+                      <SelectItem 
+                        key={student.id} 
+                        value={`${student.firstName} ${student.lastName}`}
+                        disabled={newAgent.students?.includes(`${student.firstName} ${student.lastName}`)}
+                      >
+                        {student.firstName} {student.lastName} ({student.admissionId})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {newAgent.students && newAgent.students.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {newAgent.students.map((student, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded">
+                        <span>{student}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setNewAgent({
+                              ...newAgent,
+                              students: newAgent.students?.filter(s => s !== student)
+                            })
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="agent-type">Agent Type</Label>
-                <Select>
+                <Label htmlFor="agent-type">Agent Type *</Label>
+                <Select
+                  value={newAgent.type}
+                  onValueChange={(value) => setNewAgent({...newAgent, type: value as "pickup" | "dropoff" | "both"})}
+                >
                   <SelectTrigger id="agent-type">
                     <SelectValue placeholder="Select agent type" />
                   </SelectTrigger>
@@ -202,7 +311,7 @@ export default function AdminAgentsPage() {
               <Button variant="outline" onClick={() => setIsAddAgentOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" onClick={() => setIsAddAgentOpen(false)}>
+              <Button type="button" onClick={handleAddAgent}>
                 Add Agent
               </Button>
             </DialogFooter>
@@ -236,71 +345,84 @@ export default function AdminAgentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAgents.map((agent) => (
-                    <TableRow key={agent.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={agent.photo || "/placeholder.svg"} alt={agent.name} />
-                            <AvatarFallback>{agent.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{agent.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{agent.relationship}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm">{agent.phone}</span>
-                          <span className="text-xs text-muted-foreground">{agent.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          {agent.students.map((student, index) => (
-                            <span key={index} className="text-sm">
-                              {student}
-                            </span>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            agent.type === "pickup"
-                              ? "bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                  {filteredAgents.length > 0 ? (
+                    filteredAgents.map((agent) => (
+                      <TableRow key={agent.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={agent.photo || "/placeholder.svg"} alt={agent.name} />
+                              <AvatarFallback>{agent.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{agent.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{agent.relationship}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm">{agent.phone}</span>
+                            <span className="text-xs text-muted-foreground">{agent.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {agent.students.map((student, index) => (
+                              <span key={index} className="text-sm">
+                                {student}
+                              </span>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={
+                              agent.type === "pickup"
+                                ? "bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                                : agent.type === "dropoff"
+                                  ? "bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                                  : "bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300"
+                            }
+                          >
+                            {agent.type === "pickup"
+                              ? "Pickup Only"
                               : agent.type === "dropoff"
-                                ? "bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                                : "bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300"
-                          }
-                        >
-                          {agent.type === "pickup"
-                            ? "Pickup Only"
-                            : agent.type === "dropoff"
-                              ? "Dropoff Only"
-                              : "Pickup & Dropoff"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={agent.status === "active" ? "default" : "outline"}>
-                          {agent.status === "active" ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewAgent(agent)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                                ? "Dropoff Only"
+                                : "Pickup & Dropoff"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={agent.status === "active" ? "default" : "outline"}>
+                            {agent.status === "active" ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewAgent(agent)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive"
+                              onClick={() => handleDeleteAgent(agent.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">
+                        No agents found
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -367,7 +489,12 @@ export default function AdminAgentsPage() {
                             <Button variant="ghost" size="icon">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive"
+                              onClick={() => handleDeleteAgent(agent.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -440,7 +567,12 @@ export default function AdminAgentsPage() {
                             <Button variant="ghost" size="icon">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive"
+                              onClick={() => handleDeleteAgent(agent.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -505,7 +637,7 @@ export default function AdminAgentsPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium">Authorized for Students</p>
                 <div className="space-y-2">
-                  {selectedAgent.students.map((student: string, index: number) => (
+                  {selectedAgent.students.map((student, index) => (
                     <div key={index} className="flex items-center gap-2 rounded-md border p-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>{student.substring(0, 2)}</AvatarFallback>
@@ -516,74 +648,26 @@ export default function AdminAgentsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Pickup/Dropoff History</p>
-                <div className="max-h-60 overflow-auto border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Student</TableHead>
-                        <TableHead>Time</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Today</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                          >
-                            Pickup
-                          </Badge>
-                        </TableCell>
-                        <TableCell>Alice Doe</TableCell>
-                        <TableCell>07:15 AM</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Yesterday</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                          >
-                            Dropoff
-                          </Badge>
-                        </TableCell>
-                        <TableCell>Alice Doe</TableCell>
-                        <TableCell>02:30 PM</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Yesterday</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                          >
-                            Pickup
-                          </Badge>
-                        </TableCell>
-                        <TableCell>Alice Doe</TableCell>
-                        <TableCell>07:15 AM</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>09/08/2023</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="bg-amber-50 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
-                          >
-                            Dropoff
-                          </Badge>
-                        </TableCell>
-                        <TableCell>Bob Doe</TableCell>
-                        <TableCell>02:30 PM</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Agent Status</p>
+                <Select
+                  value={selectedAgent.status}
+                  onValueChange={(value) => {
+                    handleUpdateAgentStatus(selectedAgent.id, value as "active" | "inactive")
+                    setSelectedAgent({
+                      ...selectedAgent,
+                      status: value as "active" | "inactive"
+                    })
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}

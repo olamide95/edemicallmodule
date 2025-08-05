@@ -35,382 +35,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { EmailExportDialog } from "@/components/email/email-export-dialog"
 import { getAdministratorEmails } from "@/app/admission/actions/email-actions"
 
-// Sample data for student information
-const studentData = [
-  {
-    id: "STU001",
-    avatar: "/diverse-students-studying.png",
-    fullName: "John Smith",
-    admissionNumber: "ADM-2023-001",
-    gender: "Male",
-    yearOfAdmission: "2023",
-    class: "Grade 1",
-    section: "A",
-    specialNeeds: false,
-    birthdate: "2017-05-15",
-    age: 6,
-    parents: {
-      father: {
-        name: "David Smith",
-        phone: "+1 234-567-8901",
-        email: "david.smith@example.com",
-        occupation: "Engineer",
-      },
-      mother: {
-        name: "Sarah Smith",
-        phone: "+1 234-567-8902",
-        email: "sarah.smith@example.com",
-        occupation: "Doctor",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "David Smith",
-      relationship: "Father",
-      phone: "+1 234-567-8901",
-    },
-    address: "123 Main St, Anytown, USA",
-    bloodGroup: "O+",
-    medicalConditions: "None",
-    allergies: "None",
-  },
-  {
-    id: "STU002",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Emma Johnson",
-    admissionNumber: "ADM-2023-002",
-    gender: "Female",
-    yearOfAdmission: "2023",
-    class: "Grade 2",
-    section: "B",
-    specialNeeds: true,
-    birthdate: "2016-03-22",
-    age: 7,
-    parents: {
-      father: {
-        name: "Michael Johnson",
-        phone: "+1 234-567-8903",
-        email: "michael.johnson@example.com",
-        occupation: "Accountant",
-      },
-      mother: {
-        name: "Jennifer Johnson",
-        phone: "+1 234-567-8904",
-        email: "jennifer.johnson@example.com",
-        occupation: "Teacher",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "Jennifer Johnson",
-      relationship: "Mother",
-      phone: "+1 234-567-8904",
-    },
-    address: "456 Oak Ave, Anytown, USA",
-    bloodGroup: "A+",
-    medicalConditions: "Asthma",
-    allergies: "Peanuts",
-  },
-  {
-    id: "STU003",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Michael Brown",
-    admissionNumber: "ADM-2023-003",
-    gender: "Male",
-    yearOfAdmission: "2023",
-    class: "Grade 1",
-    section: "A",
-    specialNeeds: false,
-    birthdate: "2017-08-10",
-    age: 6,
-    parents: {
-      father: {
-        name: "Robert Brown",
-        phone: "+1 234-567-8905",
-        email: "robert.brown@example.com",
-        occupation: "Lawyer",
-      },
-      mother: {
-        name: "Patricia Brown",
-        phone: "+1 234-567-8906",
-        email: "patricia.brown@example.com",
-        occupation: "Nurse",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "Patricia Brown",
-      relationship: "Mother",
-      phone: "+1 234-567-8906",
-    },
-    address: "789 Pine St, Anytown, USA",
-    bloodGroup: "B+",
-    medicalConditions: "None",
-    allergies: "None",
-  },
-  {
-    id: "STU004",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Sophia Davis",
-    admissionNumber: "ADM-2023-004",
-    gender: "Female",
-    yearOfAdmission: "2023",
-    class: "Grade 3",
-    section: "C",
-    specialNeeds: true,
-    birthdate: "2015-11-05",
-    age: 8,
-    parents: {
-      father: {
-        name: "James Davis",
-        phone: "+1 234-567-8907",
-        email: "james.davis@example.com",
-        occupation: "Professor",
-      },
-      mother: {
-        name: "Mary Davis",
-        phone: "+1 234-567-8908",
-        email: "mary.davis@example.com",
-        occupation: "Architect",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "James Davis",
-      relationship: "Father",
-      phone: "+1 234-567-8907",
-    },
-    address: "101 Maple Dr, Anytown, USA",
-    bloodGroup: "AB-",
-    medicalConditions: "ADHD",
-    allergies: "Dairy",
-  },
-  {
-    id: "STU005",
-    avatar: "/diverse-students-studying.png",
-    fullName: "William Wilson",
-    admissionNumber: "ADM-2023-005",
-    gender: "Male",
-    yearOfAdmission: "2023",
-    class: "Grade 2",
-    section: "A",
-    specialNeeds: false,
-    birthdate: "2016-07-20",
-    age: 7,
-    parents: {
-      father: null,
-      mother: {
-        name: "Elizabeth Wilson",
-        phone: "+1 234-567-8910",
-        email: "elizabeth.wilson@example.com",
-        occupation: "Business Owner",
-      },
-      guardian: {
-        name: "Thomas Wilson",
-        phone: "+1 234-567-8911",
-        email: "thomas.wilson@example.com",
-        relationship: "Uncle",
-        occupation: "Retired",
-      },
-    },
-    emergencyContact: {
-      name: "Elizabeth Wilson",
-      relationship: "Mother",
-      phone: "+1 234-567-8910",
-    },
-    address: "222 Elm St, Anytown, USA",
-    bloodGroup: "O-",
-    medicalConditions: "None",
-    allergies: "None",
-  },
-  {
-    id: "STU006",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Olivia Martinez",
-    admissionNumber: "ADM-2023-006",
-    gender: "Female",
-    yearOfAdmission: "2023",
-    class: "Grade 1",
-    section: "B",
-    specialNeeds: false,
-    birthdate: "2017-02-14",
-    age: 6,
-    parents: {
-      father: {
-        name: "Carlos Martinez",
-        phone: "+1 234-567-8912",
-        email: "carlos.martinez@example.com",
-        occupation: "Chef",
-      },
-      mother: {
-        name: "Isabella Martinez",
-        phone: "+1 234-567-8913",
-        email: "isabella.martinez@example.com",
-        occupation: "Artist",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "Carlos Martinez",
-      relationship: "Father",
-      phone: "+1 234-567-8912",
-    },
-    address: "333 Cedar Ln, Anytown, USA",
-    bloodGroup: "A-",
-    medicalConditions: "None",
-    allergies: "Shellfish",
-  },
-  {
-    id: "STU007",
-    avatar: "/diverse-students-studying.png",
-    fullName: "James Taylor",
-    admissionNumber: "ADM-2023-007",
-    gender: "Male",
-    yearOfAdmission: "2023",
-    class: "Grade 3",
-    section: "A",
-    specialNeeds: true,
-    birthdate: "2015-09-30",
-    age: 8,
-    parents: {
-      father: {
-        name: "William Taylor",
-        phone: "+1 234-567-8914",
-        email: "william.taylor@example.com",
-        occupation: "Pilot",
-      },
-      mother: {
-        name: "Linda Taylor",
-        phone: "+1 234-567-8915",
-        email: "linda.taylor@example.com",
-        occupation: "Flight Attendant",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "Linda Taylor",
-      relationship: "Mother",
-      phone: "+1 234-567-8915",
-    },
-    address: "444 Birch Rd, Anytown, USA",
-    bloodGroup: "B-",
-    medicalConditions: "Dyslexia",
-    allergies: "None",
-  },
-  {
-    id: "STU008",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Isabella Anderson",
-    admissionNumber: "ADM-2023-008",
-    gender: "Female",
-    yearOfAdmission: "2023",
-    class: "Grade 2",
-    section: "C",
-    specialNeeds: false,
-    birthdate: "2016-12-05",
-    age: 7,
-    parents: {
-      father: {
-        name: "Richard Anderson",
-        phone: "+1 234-567-8916",
-        email: "richard.anderson@example.com",
-        occupation: "Software Developer",
-      },
-      mother: {
-        name: "Susan Anderson",
-        phone: "+1 234-567-8917",
-        email: "susan.anderson@example.com",
-        occupation: "Marketing Manager",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "Richard Anderson",
-      relationship: "Father",
-      phone: "+1 234-567-8916",
-    },
-    address: "555 Walnut Ave, Anytown, USA",
-    bloodGroup: "AB+",
-    medicalConditions: "None",
-    allergies: "None",
-  },
-  {
-    id: "STU009",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Ethan Thomas",
-    admissionNumber: "ADM-2023-009",
-    gender: "Male",
-    yearOfAdmission: "2023",
-    class: "Grade 1",
-    section: "C",
-    specialNeeds: false,
-    birthdate: "2017-06-18",
-    age: 6,
-    parents: {
-      father: {
-        name: "Daniel Thomas",
-        phone: "+1 234-567-8918",
-        email: "daniel.thomas@example.com",
-        occupation: "Electrician",
-      },
-      mother: null,
-      guardian: {
-        name: "Margaret Thomas",
-        phone: "+1 234-567-8919",
-        email: "margaret.thomas@example.com",
-        relationship: "Grandmother",
-        occupation: "Retired",
-      },
-    },
-    emergencyContact: {
-      name: "Margaret Thomas",
-      relationship: "Grandmother",
-      phone: "+1 234-567-8919",
-    },
-    address: "666 Spruce Ct, Anytown, USA",
-    bloodGroup: "O+",
-    medicalConditions: "None",
-    allergies: "None",
-  },
-  {
-    id: "STU010",
-    avatar: "/diverse-students-studying.png",
-    fullName: "Ava Jackson",
-    admissionNumber: "ADM-2023-010",
-    gender: "Female",
-    yearOfAdmission: "2023",
-    class: "Grade 3",
-    section: "B",
-    specialNeeds: true,
-    birthdate: "2015-04-22",
-    age: 8,
-    parents: {
-      father: {
-        name: "Christopher Jackson",
-        phone: "+1 234-567-8920",
-        email: "christopher.jackson@example.com",
-        occupation: "Police Officer",
-      },
-      mother: {
-        name: "Amanda Jackson",
-        phone: "+1 234-567-8921",
-        email: "amanda.jackson@example.com",
-        occupation: "Pharmacist",
-      },
-      guardian: null,
-    },
-    emergencyContact: {
-      name: "Amanda Jackson",
-      relationship: "Mother",
-      phone: "+1 234-567-8921",
-    },
-    address: "777 Aspen Way, Anytown, USA",
-    bloodGroup: "A+",
-    medicalConditions: "Autism Spectrum",
-    allergies: "Gluten",
-  },
-]
-
 // Define export field categories
 const exportFieldGroups = [
   {
@@ -483,23 +107,78 @@ export function StudentInformation() {
     allExportFields.filter((field) => field.defaultChecked).map((field) => field.id),
   )
   const [administrators, setAdministrators] = useState<{ email: string; name: string }[]>([])
+  const [students, setStudents] = useState<any[]>([])
 
-  // Fetch administrators on component mount
+  // Load admitted students from local storage
   useEffect(() => {
-    const fetchAdministrators = async () => {
+    const fetchStudents = async () => {
       try {
+        // Fetch administrators
         const admins = await getAdministratorEmails()
         setAdministrators(admins)
+
+        // Load students from local storage
+        const savedResponses = localStorage.getItem('admissionFormResponses')
+        if (savedResponses) {
+          const allStudents = JSON.parse(savedResponses)
+          // Filter only admitted students
+          const admittedStudents = allStudents
+            .filter((student: any) => student.status === "Admitted")
+            .map((student: any) => ({
+              id: student.id,
+              avatar: "/diverse-students-studying.png",
+              fullName: `${student.firstName} ${student.lastName}`,
+              admissionNumber: student.admissionNumber || `ADM-${student.id.slice(0, 8)}`,
+              gender: student.gender || "Not specified",
+              yearOfAdmission: new Date().getFullYear().toString(),
+              class: student.class || "Not assigned",
+              section: student.section || "Not assigned",
+              specialNeeds: student.specialNeeds || false,
+              birthdate: student.birthdate || "Not specified",
+              age: student.age || "Not specified",
+              parents: {
+                father: student.fatherName ? {
+                  name: student.fatherName,
+                  phone: student.fatherPhone || "Not specified",
+                  email: student.fatherEmail || "Not specified",
+                  occupation: student.fatherOccupation || "Not specified"
+                } : null,
+                mother: student.motherName ? {
+                  name: student.motherName,
+                  phone: student.motherPhone || "Not specified",
+                  email: student.motherEmail || "Not specified",
+                  occupation: student.motherOccupation || "Not specified"
+                } : null,
+                guardian: student.guardianName ? {
+                  name: student.guardianName,
+                  phone: student.guardianPhone || "Not specified",
+                  email: student.guardianEmail || "Not specified",
+                  relationship: student.guardianRelationship || "Guardian",
+                  occupation: student.guardianOccupation || "Not specified"
+                } : null
+              },
+              emergencyContact: {
+                name: student.emergencyContactName || "Not specified",
+                relationship: student.emergencyContactRelationship || "Not specified",
+                phone: student.emergencyContactPhone || "Not specified"
+              },
+              address: student.address || "Not specified",
+              bloodGroup: student.bloodGroup || "Not specified",
+              medicalConditions: student.medicalConditions || "None",
+              allergies: student.allergies || "None"
+            }))
+          setStudents(admittedStudents)
+        }
       } catch (error) {
-        console.error("Failed to fetch administrators:", error)
+        console.error("Failed to fetch data:", error)
       }
     }
 
-    fetchAdministrators()
+    fetchStudents()
   }, [])
 
   // Filter students based on search term and filters
-  const filteredStudents = studentData.filter((student) => {
+  const filteredStudents = students.filter((student) => {
     const matchesSearch =
       student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase())
@@ -545,12 +224,13 @@ export function StudentInformation() {
   }
 
   // Get unique values for filters
-  const classes = [...new Set(studentData.map((student) => student.class))]
-  const sections = [...new Set(studentData.map((student) => student.section))]
-  const years = [...new Set(studentData.map((student) => student.yearOfAdmission))]
+  const classes = [...new Set(students.map((student) => student.class))]
+  const sections = [...new Set(students.map((student) => student.section))]
+  const years = [...new Set(students.map((student) => student.yearOfAdmission))]
 
   // Format date
   const formatDate = (dateString: string) => {
+    if (!dateString || dateString === "Not specified") return "Not specified"
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
   }
@@ -720,7 +400,7 @@ export function StudentInformation() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Student Information</h1>
-        <p className="text-muted-foreground">View and manage detailed information for all students.</p>
+        <p className="text-muted-foreground">View and manage detailed information for admitted students.</p>
       </div>
 
       <Card>
@@ -1012,7 +692,7 @@ export function StudentInformation() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={12} className="h-24 text-center">
-                      No students found matching your criteria.
+                      No admitted students found matching your criteria.
                     </TableCell>
                   </TableRow>
                 )}
@@ -1023,7 +703,7 @@ export function StudentInformation() {
           <div className="flex items-center justify-end space-x-2 py-4">
             <div className="text-sm text-muted-foreground">
               Showing <span className="font-medium">{sortedStudents.length}</span> of{" "}
-              <span className="font-medium">{studentData.length}</span> students
+              <span className="font-medium">{students.length}</span> admitted students
             </div>
           </div>
         </CardContent>

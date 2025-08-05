@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,9 +9,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Bus } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+
+interface Employee {
+  id: string
+  name: string
+  department: string
+  subDepartment: string
+}
+
+interface Route {
+  id: string
+  name: string
+  description: string
+  stops: number
+  buses: number
+  students: number
+  baseFee: string
+  status: "active" | "inactive"
+}
 
 export default function NewBusPage() {
+  const router = useRouter()
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [routes, setRoutes] = useState<Route[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  
   const [busData, setBusData] = useState({
+    id: Date.now().toString(),
     name: "",
     plateNumber: "",
     year: "",
@@ -21,7 +44,42 @@ export default function NewBusPage() {
     driver: "",
     administrator: "",
     route: "",
+    status: "active" as "active" | "maintenance" | "inactive"
   })
+
+  useEffect(() => {
+    // Load employees and routes from localStorage
+    const savedEmployees = localStorage.getItem('employees')
+    const savedRoutes = localStorage.getItem('routes')
+
+    if (savedEmployees) {
+      setEmployees(JSON.parse(savedEmployees))
+    }
+    if (savedRoutes) {
+      setRoutes(JSON.parse(savedRoutes))
+    }
+    setIsLoading(false)
+  }, [])
+
+  const getDrivers = () => {
+    return employees.filter(emp => 
+      emp.department || 
+      emp.subDepartment
+    )
+  }
+
+  const getAdministrators = () => {
+    return employees.filter(emp => 
+      emp.department || 
+      emp.subDepartment ||
+      emp.department||
+      emp.subDepartment
+    )
+  }
+
+  const getActiveRoutes = () => {
+    return routes.filter(route => route.status === "active")
+  }
 
   const handleChange = (field: string, value: string) => {
     setBusData({
@@ -32,14 +90,35 @@ export default function NewBusPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Submit logic would go here
-    console.log("Submitted bus data:", busData)
+    
+    // Get existing buses from localStorage
+    const savedBuses = localStorage.getItem('buses')
+    const existingBuses = savedBuses ? JSON.parse(savedBuses) : []
+    
+    // Add new bus
+    const updatedBuses = [
+      ...existingBuses,
+      {
+        ...busData,
+        capacity: parseInt(busData.capacity),
+      }
+    ]
+    
+    // Save to localStorage
+    localStorage.setItem('buses', JSON.stringify(updatedBuses))
+    
+    // Redirect to buses page
+    router.push('/schoolbus/admin/buses')
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2">
-        <Link href="/buses">
+        <Link href="/schoolbus/admin/buses">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -106,57 +185,122 @@ export default function NewBusPage() {
 
             <div className="space-y-2">
               <Label htmlFor="driver">Driver</Label>
-              <Select onValueChange={(value) => handleChange("driver", value)}>
+              <Select 
+                onValueChange={(value) => handleChange("driver", value)}
+                required
+                disabled={getDrivers().length === 0}
+              >
                 <SelectTrigger id="driver">
                   <SelectValue placeholder="Select a driver" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="john-smith">John Smith</SelectItem>
-                  <SelectItem value="michael-brown">Michael Brown</SelectItem>
-                  <SelectItem value="robert-wilson">Robert Wilson</SelectItem>
-                  <SelectItem value="david-martinez">David Martinez</SelectItem>
-                  <SelectItem value="james-thomas">James Thomas</SelectItem>
+                  {getDrivers().length > 0 ? (
+                    getDrivers().map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-drivers" disabled>
+                      No drivers found in employees
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
+              {getDrivers().length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No employees with driver role found. Please add drivers in the employees section first.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="administrator">Bus Administrator</Label>
-              <Select onValueChange={(value) => handleChange("administrator", value)}>
+              <Select 
+                onValueChange={(value) => handleChange("administrator", value)}
+                required
+                disabled={getAdministrators().length === 0}
+              >
                 <SelectTrigger id="administrator">
                   <SelectValue placeholder="Select an administrator" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sarah-johnson">Sarah Johnson</SelectItem>
-                  <SelectItem value="emily-davis">Emily Davis</SelectItem>
-                  <SelectItem value="jessica-taylor">Jessica Taylor</SelectItem>
-                  <SelectItem value="jennifer-anderson">Jennifer Anderson</SelectItem>
-                  <SelectItem value="lisa-robinson">Lisa Robinson</SelectItem>
+                  {getAdministrators().length > 0 ? (
+                    getAdministrators().map((admin) => (
+                      <SelectItem key={admin.id} value={admin.id}>
+                        {admin.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-admins" disabled>
+                      No administrators found in employees
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
+              {getAdministrators().length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No employees with administrator role found. Please add administrators in the employees section first.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="route">Route</Label>
-              <Select onValueChange={(value) => handleChange("route", value)}>
+              <Select 
+                onValueChange={(value) => handleChange("route", value)} 
+                required
+                disabled={getActiveRoutes().length === 0}
+              >
                 <SelectTrigger id="route">
                   <SelectValue placeholder="Select a route" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="north-route">North Route</SelectItem>
-                  <SelectItem value="east-route">East Route</SelectItem>
-                  <SelectItem value="west-route">West Route</SelectItem>
-                  <SelectItem value="south-route">South Route</SelectItem>
-                  <SelectItem value="central-route">Central Route</SelectItem>
+                  {getActiveRoutes().length > 0 ? (
+                    getActiveRoutes().map((route) => (
+                      <SelectItem key={route.id} value={route.name}>
+                        {route.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-routes" disabled>
+                      No active routes found
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {getActiveRoutes().length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No active routes found. Please add routes first.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select 
+                onValueChange={(value) => handleChange("status", value as "active" | "maintenance" | "inactive")} 
+                defaultValue="active"
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Link href="/buses">
+            <Link href="/schoolbus/admin/buses">
               <Button variant="outline">Cancel</Button>
             </Link>
-            <Button type="submit">
+            <Button 
+              type="submit" 
+              disabled={!busData.driver || !busData.administrator || !busData.route}
+            >
               <Bus className="mr-2 h-4 w-4" />
               Create Bus
             </Button>
