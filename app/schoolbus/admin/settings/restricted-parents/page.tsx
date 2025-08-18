@@ -53,14 +53,14 @@ export default function RestrictedParentsPage() {
   const [isMounted, setIsMounted] = useState(false)
 
   // Load data from localStorage
-  useEffect(() => {
-    const savedParents = JSON.parse(localStorage.getItem('restrictedParents') || []
-    const onboardingParents = JSON.parse(localStorage.getItem('parents') || []
-    const onboardingStudents = JSON.parse(localStorage.getItem('students') || []
+ useEffect(() => {
+    const savedParents = JSON.parse(localStorage.getItem('restrictedParents') || '[]');
+    const onboardingParents = JSON.parse(localStorage.getItem('parents') || '[]');
+    const onboardingStudents = JSON.parse(localStorage.getItem('students') || '[]');
     
     // Merge onboarding parents with restricted parents data
     const mergedParents = onboardingParents.map((parent: any) => {
-      const restrictedParent = savedParents.find((p: Parent) => p.id === parent.id)
+      const restrictedParent = savedParents.find((p: Parent) => p.id === parent.id);
       return {
         id: parent.id,
         name: parent.name,
@@ -70,13 +70,13 @@ export default function RestrictedParentsPage() {
         status: restrictedParent?.status || "enabled",
         reason: restrictedParent?.reason,
         date: restrictedParent?.date
-      }
-    })
+      };
+    });
     
-    setParents(mergedParents)
-    setStudents(onboardingStudents)
-    setIsMounted(true)
-  }, [])
+    setParents(mergedParents);
+    setStudents(onboardingStudents);
+    setIsMounted(true);
+  }, []);
 
   // Save to localStorage when parents change
   useEffect(() => {
