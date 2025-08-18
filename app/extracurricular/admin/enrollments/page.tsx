@@ -12,7 +12,7 @@ export default function EnrollmentsPage() {
           <h1 className="text-3xl font-bold">Enrollments</h1>
           <p className="text-muted-foreground">Manage student club enrollments</p>
         </div>
-        <Link href="/admin/enrollments/new">
+        <Link href="/extracurricular/admin/enrollments/new">
           <Button>
             <PlusIcon className="h-4 w-4 mr-1" />
             New Enrollment

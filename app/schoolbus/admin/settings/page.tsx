@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
@@ -12,67 +12,66 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { AlertCircle, Save, Search, UserX } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/use-toast"
 
-// Mock data for restricted parents
-const restrictedParents = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    phone: "+234 123 456 7890",
-    children: 2,
-    reason: "Payment issues",
-    date: "2023-09-01",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    phone: "+234 234 567 8901",
-    children: 1,
-    reason: "Behavioral issues",
-    date: "2023-08-15",
-  },
-]
+interface BusSettings {
+  parentEnrollment: boolean
+  enrollmentDeadline: string
+  unenrollmentDeadline: string
+  seatTimeout: string
+  currentTerm: string
+  busPolicy: string
+  enableTracking: boolean
+  firstAlertMinutes: string
+  secondAlertMinutes: string
+  latePickupMinutes: string
+}
 
 export default function SettingsPage() {
-  const [parentEnrollment, setParentEnrollment] = useState(true)
-  const [enrollmentDeadline, setEnrollmentDeadline] = useState("15")
-  const [unenrollmentDeadline, setUnenrollmentDeadline] = useState("7")
-  const [seatTimeout, setSeatTimeout] = useState("48")
-  const [currentTerm, setCurrentTerm] = useState("first")
-  const [busPolicy, setBusPolicy] = useState(`# School Bus Policy
+  const router = useRouter()
+  const [settings, setSettings] = useState<BusSettings>({
+    parentEnrollment: true,
+    enrollmentDeadline: "15",
+    unenrollmentDeadline: "7",
+    seatTimeout: "48",
+    currentTerm: "first",
+    busPolicy: `# School Bus Policy\n\n## 1. General Rules\n- Students must be at their designated bus stop at least 5 minutes before the scheduled pickup time.\n- Students must follow the instructions of the bus driver and bus administrator at all times.\n- Eating and drinking are not allowed on the bus.`,
+    enableTracking: true,
+    firstAlertMinutes: "10",
+    secondAlertMinutes: "5",
+    latePickupMinutes: "15"
+  })
+  const [isMounted, setIsMounted] = useState(false)
 
-## 1. General Rules
-- Students must be at their designated bus stop at least 5 minutes before the scheduled pickup time.
-- Students must follow the instructions of the bus driver and bus administrator at all times.
-- Eating and drinking are not allowed on the bus.
+  // Load settings from localStorage
+  useEffect(() => {
+    const savedSettings = JSON.parse(localStorage.getItem('busSettings') || 'null')
+    if (savedSettings) {
+      setSettings(savedSettings)
+    }
+    setIsMounted(true)
+  }, [])
 
-## 2. Safety Regulations
-- Students must remain seated with seatbelts fastened while the bus is in motion.
-- Students must not distract the driver or create excessive noise.
-- Students must not throw objects inside or outside the bus.
+  // Save to localStorage when settings change
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('busSettings', JSON.stringify(settings))
+    }
+  }, [settings, isMounted])
 
-## 3. Disciplinary Actions
-- First offense: Verbal warning
-- Second offense: Written warning to parents
-- Third offense: Suspension from bus service for one week
-- Fourth offense: Suspension from bus service for the remainder of the term
+  const handleSettingChange = (field: keyof BusSettings, value: any) => {
+    setSettings(prev => ({ ...prev, [field]: value }))
+  }
 
-## 4. Payment Policy
-- Bus fees must be paid in full before service begins.
-- No refunds will be issued after the first week of service.
-- Late payments may result in suspension of service.
+  const saveSettings = () => {
+    toast({
+      title: "Success",
+      description: "Settings saved successfully",
+    })
+  }
 
-## 5. Contact Information
-For any inquiries or concerns, please contact the Transportation Department at transportation@school.edu or call 555-123-4567.`)
-
-  // Bus tracking notification settings
-  const [enableTracking, setEnableTracking] = useState(true)
-  const [firstAlertMinutes, setFirstAlertMinutes] = useState("10")
-  const [secondAlertMinutes, setSecondAlertMinutes] = useState("5")
-  const [latePickupMinutes, setLatePickupMinutes] = useState("15")
+  if (!isMounted) return null
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,14 +102,21 @@ For any inquiries or concerns, please contact the Transportation Department at t
                     Allow parents to enroll their children for bus service
                   </span>
                 </Label>
-                <Switch id="parent-enrollment" checked={parentEnrollment} onCheckedChange={setParentEnrollment} />
+                <Switch 
+                  id="parent-enrollment" 
+                  checked={settings.parentEnrollment} 
+                  onCheckedChange={(value) => handleSettingChange("parentEnrollment", value)} 
+                />
               </div>
 
               <Separator />
 
               <div className="grid gap-4">
                 <Label htmlFor="current-term">Current Academic Term</Label>
-                <Select value={currentTerm} onValueChange={setCurrentTerm}>
+                <Select 
+                  value={settings.currentTerm} 
+                  onValueChange={(value) => handleSettingChange("currentTerm", value)}
+                >
                   <SelectTrigger id="current-term">
                     <SelectValue placeholder="Select term" />
                   </SelectTrigger>
@@ -131,7 +137,7 @@ For any inquiries or concerns, please contact the Transportation Department at t
               </Alert>
             </CardContent>
             <CardFooter>
-              <Button>
+              <Button onClick={saveSettings}>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>
@@ -153,8 +159,8 @@ For any inquiries or concerns, please contact the Transportation Department at t
                   type="number"
                   min="1"
                   max="60"
-                  value={enrollmentDeadline}
-                  onChange={(e) => setEnrollmentDeadline(e.target.value)}
+                  value={settings.enrollmentDeadline}
+                  onChange={(e) => handleSettingChange("enrollmentDeadline", e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">Parents will not be able to enroll after this period</p>
               </div>
@@ -168,8 +174,8 @@ For any inquiries or concerns, please contact the Transportation Department at t
                   type="number"
                   min="1"
                   max="30"
-                  value={unenrollmentDeadline}
-                  onChange={(e) => setUnenrollmentDeadline(e.target.value)}
+                  value={settings.unenrollmentDeadline}
+                  onChange={(e) => handleSettingChange("unenrollmentDeadline", e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
                   Parents will not be able to unenroll their children after this period
@@ -185,8 +191,8 @@ For any inquiries or concerns, please contact the Transportation Department at t
                   type="number"
                   min="1"
                   max="72"
-                  value={seatTimeout}
-                  onChange={(e) => setSeatTimeout(e.target.value)}
+                  value={settings.seatTimeout}
+                  onChange={(e) => handleSettingChange("seatTimeout", e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
                   Reserved seats will be released if payment is not received within this time
@@ -194,61 +200,11 @@ For any inquiries or concerns, please contact the Transportation Department at t
               </div>
             </CardContent>
             <CardFooter>
-              <Button>
+              <Button onClick={saveSettings}>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>
             </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Restricted Parents</CardTitle>
-              <CardDescription>Manage parents who are restricted from enrolling in bus service</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input type="search" placeholder="Search parents..." className="pl-8" />
-                </div>
-                <Button>
-                  <UserX className="mr-2 h-4 w-4" />
-                  Restrict Parent
-                </Button>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Parent Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Children</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Date Restricted</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {restrictedParents.map((parent) => (
-                    <TableRow key={parent.id}>
-                      <TableCell className="font-medium">{parent.name}</TableCell>
-                      <TableCell>{parent.email}</TableCell>
-                      <TableCell>{parent.phone}</TableCell>
-                      <TableCell>{parent.children}</TableCell>
-                      <TableCell>{parent.reason}</TableCell>
-                      <TableCell>{parent.date}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          Remove Restriction
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
           </Card>
         </TabsContent>
 
@@ -266,7 +222,11 @@ For any inquiries or concerns, please contact the Transportation Department at t
                     Allow parents to track the bus location in real-time
                   </span>
                 </Label>
-                <Switch id="enable-tracking" checked={enableTracking} onCheckedChange={setEnableTracking} />
+                <Switch 
+                  id="enable-tracking" 
+                  checked={settings.enableTracking} 
+                  onCheckedChange={(value) => handleSettingChange("enableTracking", value)} 
+                />
               </div>
 
               <Separator />
@@ -278,9 +238,9 @@ For any inquiries or concerns, please contact the Transportation Department at t
                   type="number"
                   min="1"
                   max="60"
-                  value={firstAlertMinutes}
-                  onChange={(e) => setFirstAlertMinutes(e.target.value)}
-                  disabled={!enableTracking}
+                  value={settings.firstAlertMinutes}
+                  onChange={(e) => handleSettingChange("firstAlertMinutes", e.target.value)}
+                  disabled={!settings.enableTracking}
                 />
                 <p className="text-sm text-muted-foreground">
                   Parents will receive their first notification when the bus is this many minutes away
@@ -294,9 +254,9 @@ For any inquiries or concerns, please contact the Transportation Department at t
                   type="number"
                   min="1"
                   max="30"
-                  value={secondAlertMinutes}
-                  onChange={(e) => setSecondAlertMinutes(e.target.value)}
-                  disabled={!enableTracking}
+                  value={settings.secondAlertMinutes}
+                  onChange={(e) => handleSettingChange("secondAlertMinutes", e.target.value)}
+                  disabled={!settings.enableTracking}
                 />
                 <p className="text-sm text-muted-foreground">
                   Parents will receive their second notification when the bus is this many minutes away
@@ -312,8 +272,8 @@ For any inquiries or concerns, please contact the Transportation Department at t
                   type="number"
                   min="1"
                   max="30"
-                  value={latePickupMinutes}
-                  onChange={(e) => setLatePickupMinutes(e.target.value)}
+                  value={settings.latePickupMinutes}
+                  onChange={(e) => handleSettingChange("latePickupMinutes", e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
                   Bus will leave if a student doesn't show up within this many minutes of the scheduled pickup time
@@ -321,7 +281,7 @@ For any inquiries or concerns, please contact the Transportation Department at t
               </div>
             </CardContent>
             <CardFooter>
-              <Button>
+              <Button onClick={saveSettings}>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>
@@ -343,8 +303,8 @@ For any inquiries or concerns, please contact the Transportation Department at t
                 <Textarea
                   id="bus-policy"
                   rows={15}
-                  value={busPolicy}
-                  onChange={(e) => setBusPolicy(e.target.value)}
+                  value={settings.busPolicy}
+                  onChange={(e) => handleSettingChange("busPolicy", e.target.value)}
                   className="font-mono text-sm"
                 />
                 <p className="text-sm text-muted-foreground">
@@ -353,7 +313,7 @@ For any inquiries or concerns, please contact the Transportation Department at t
               </div>
             </CardContent>
             <CardFooter>
-              <Button>
+              <Button onClick={saveSettings}>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -12,34 +12,6 @@ import * as z from "zod"
 import { ArrowRightIcon } from "lucide-react"
 import { StatusBadge } from "@/components/status-badge"
 
-// Mock data
-const mockStudents = [
-  { id: 1, name: "John Doe", class: "JSS 3", section: "A" },
-  { id: 2, name: "Jane Smith", class: "SSS 1", section: "B" },
-  { id: 3, name: "Michael Johnson", class: "JSS 2", section: "C" },
-  { id: 4, name: "Sarah Williams", class: "SSS 2", section: "A" },
-  { id: 5, name: "Robert Brown", class: "JSS 1", section: "B" },
-]
-
-const mockClubs = [
-  { id: 1, name: "Chess Club", fee: 15000 },
-  { id: 2, name: "Debate Club", fee: 12000 },
-  { id: 3, name: "Science Club", fee: 18000 },
-  { id: 4, name: "Art Club", fee: 20000 },
-  { id: 5, name: "Sports Club", fee: 25000 },
-  { id: 6, name: "Music Club", fee: 22000 },
-  { id: 7, name: "Coding Club", fee: 30000 },
-]
-
-// Student club enrollments
-const mockEnrollments = [
-  { studentId: 1, clubId: 1 }, // John Doe - Chess Club
-  { studentId: 2, clubId: 2 }, // Jane Smith - Debate Club
-  { studentId: 3, clubId: 3 }, // Michael Johnson - Science Club
-  { studentId: 4, clubId: 4 }, // Sarah Williams - Art Club
-  { studentId: 5, clubId: 5 }, // Robert Brown - Sports Club
-]
-
 // Form schema
 const formSchema = z.object({
   studentId: z.string().min(1, { message: "Please select a student" }),
@@ -48,12 +20,100 @@ const formSchema = z.object({
   reason: z.string().min(5, { message: "Please provide a reason for the change" }).max(500),
 })
 
+type Student = {
+  id: string
+  firstName: string
+  lastName: string
+  admissionId: string
+  studentId: string
+  class: string
+  section: string
+  status: string
+}
+
+type Club = {
+  id: string
+  name: string
+  fee: number
+  status: string
+  description?: string
+  terms?: string[]
+  classes?: string[]
+  variants?: {
+    id: string
+    name: string
+    amount: number
+  }[]
+}
+
+type Enrollment = {
+  id: string
+  studentId: string
+  studentName: string
+  class: string
+  section: string
+  clubId: string
+  clubName: string
+  terms: string[]
+  variant: string
+  amount: number
+  status: "Active" | "Inactive"
+  enrollmentDate: string
+}
+
 export function AdminClubChangeForm() {
-  const [currentClub, setCurrentClub] = useState<{ id: number; name: string; fee: number } | null>(null)
-  const [newClub, setNewClub] = useState<{ id: number; name: string; fee: number } | null>(null)
+  const [students, setStudents] = useState<Student[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [currentClub, setCurrentClub] = useState<Club | null>(null)
+  const [newClub, setNewClub] = useState<Club | null>(null)
   const [feeDifference, setFeeDifference] = useState<number>(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [availableClubs, setAvailableClubs] = useState<Club[]>([])
+
+  // Load data from localStorage
+  useEffect(() => {
+    const loadData = () => {
+      // Load students (only admitted ones with studentId)
+      const savedStudents = localStorage.getItem('admissionFormResponses')
+      if (savedStudents) {
+        const allStudents = JSON.parse(savedStudents)
+        const admittedStudents = allStudents
+          .filter((s: any) => s.status === "Admitted" && s.studentId)
+          .map((s: any) => ({
+            id: s.id,
+            firstName: s.firstName,
+            lastName: s.lastName,
+            admissionId: s.admissionNumber || `ADM-${s.id.slice(0, 8)}`,
+            studentId: s.studentId,
+            class: s.class || "JSS 1",
+            section: s.section || "A",
+            status: s.status
+          }))
+        setStudents(admittedStudents)
+      }
+
+      // Load clubs
+      const savedClubs = localStorage.getItem('clubs')
+      if (savedClubs) {
+        const allClubs = JSON.parse(savedClubs)
+        const activeClubs = allClubs.filter((c: any) => c.status === "active")
+        setClubs(activeClubs)
+        setAvailableClubs(activeClubs)
+      }
+
+      // Load enrollments
+      const savedEnrollments = localStorage.getItem('enrollments')
+      if (savedEnrollments) {
+        setEnrollments(JSON.parse(savedEnrollments))
+      } else {
+        setEnrollments([])
+      }
+    }
+
+    loadData()
+  }, [])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,27 +126,37 @@ export function AdminClubChangeForm() {
   })
 
   const handleStudentChange = (studentId: string) => {
-    const enrollment = mockEnrollments.find((e) => e.studentId === Number.parseInt(studentId))
+    // Find active enrollment for this student
+    const enrollment = enrollments.find(
+      (e) => e.studentId === studentId && e.status === "Active"
+    )
+    
     if (enrollment) {
-      const club = mockClubs.find((c) => c.id === enrollment.clubId)
+      const club = clubs.find((c) => c.id === enrollment.clubId)
       if (club) {
         setCurrentClub(club)
-        form.setValue("currentClubId", club.id.toString())
+        form.setValue("currentClubId", club.id)
+        
+        // Update available clubs (all active clubs except the current one)
+        setAvailableClubs(clubs.filter(c => c.id !== club.id))
       }
     } else {
       setCurrentClub(null)
       form.setValue("currentClubId", "")
+      setAvailableClubs(clubs) // Show all active clubs if student isn't enrolled
     }
+    
     setNewClub(null)
     form.setValue("newClubId", "")
     setFeeDifference(0)
   }
 
   const handleNewClubChange = (clubId: string) => {
-    const club = mockClubs.find((c) => c.id === Number.parseInt(clubId))
-    if (club && currentClub) {
+    const club = clubs.find((c) => c.id === clubId)
+    if (club) {
       setNewClub(club)
-      const difference = club.fee - currentClub.fee
+      const currentFee = currentClub?.fee || 0
+      const difference = club.fee - currentFee
       setFeeDifference(difference)
     } else {
       setNewClub(null)
@@ -96,11 +166,34 @@ export function AdminClubChangeForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true)
-    // Simulate API call
+    
+    // Create new club change request
+    const newRequest = {
+      id: Date.now().toString(),
+      studentId: values.studentId,
+      currentClubId: values.currentClubId,
+      newClubId: values.newClubId,
+      reason: values.reason,
+      requestDate: new Date().toISOString().split('T')[0],
+      status: "pending" as const,
+      feeDifference: feeDifference,
+      studentDetails: students.find(s => s.id === values.studentId),
+      currentClubDetails: currentClub,
+      newClubDetails: clubs.find(c => c.id === values.newClubId)
+    }
+
+    // Save to localStorage
+    const savedRequests = localStorage.getItem('clubChangeRequests')
+    const existingRequests = savedRequests ? JSON.parse(savedRequests) : []
+    const updatedRequests = [...existingRequests, newRequest]
+    localStorage.setItem('clubChangeRequests', JSON.stringify(updatedRequests))
+
+    // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 1500))
-    console.log(values)
+    
     setIsSubmitting(false)
     setIsSuccess(true)
+    
     // Reset form after 2 seconds
     setTimeout(() => {
       form.reset()
@@ -136,9 +229,9 @@ export function AdminClubChangeForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {mockStudents.map((student) => (
-                        <SelectItem key={student.id} value={student.id.toString()}>
-                          {student.name} - {student.class} {student.section}
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.firstName} {student.lastName} - {student.class} {student.section}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -148,7 +241,7 @@ export function AdminClubChangeForm() {
               )}
             />
 
-            {currentClub && (
+            {currentClub ? (
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -159,7 +252,12 @@ export function AdminClubChangeForm() {
                       <div className="flex h-10 w-full rounded-md border border-input bg-secondary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">
                         {currentClub.name}
                       </div>
-                      <FormDescription>Current Fee: ₦{currentClub.fee.toLocaleString()}</FormDescription>
+                      <FormDescription>
+                        Current Fee: ₦{(currentClub.fee || 0).toLocaleString()}
+                        {currentClub.description && (
+                          <p className="text-xs mt-1">{currentClub.description}</p>
+                        )}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -177,7 +275,7 @@ export function AdminClubChangeForm() {
                           handleNewClubChange(value)
                         }}
                         value={field.value}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !currentClub}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -185,22 +283,48 @@ export function AdminClubChangeForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {mockClubs
-                            .filter((club) => club.id !== currentClub.id)
-                            .map((club) => (
-                              <SelectItem key={club.id} value={club.id.toString()}>
-                                {club.name} - ₦{club.fee.toLocaleString()}
+                          {availableClubs.length > 0 ? (
+                            availableClubs.map((club) => (
+                              <SelectItem key={club.id} value={club.id}>
+                                <div className="flex flex-col">
+                                  <span>{club.name} - ₦{(club.fee || 0).toLocaleString()}</span>
+                                  {club.description && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {club.description.length > 50 
+                                        ? `${club.description.substring(0, 50)}...` 
+                                        : club.description}
+                                    </span>
+                                  )}
+                                </div>
                               </SelectItem>
-                            ))}
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              No other clubs available
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
-                      {newClub && <FormDescription>New Fee: ₦{newClub.fee.toLocaleString()}</FormDescription>}
+                      {newClub && (
+                        <FormDescription>
+                          New Fee: ₦{(newClub.fee || 0).toLocaleString()}
+                          {newClub.description && (
+                            <p className="text-xs mt-1">{newClub.description}</p>
+                          )}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-            )}
+            ) : form.getValues("studentId") ? (
+              <div className="rounded-md border border-dashed p-4 text-center">
+                <p className="text-muted-foreground">
+                  Selected student is not currently enrolled in any club.
+                </p>
+              </div>
+            ) : null}
 
             {currentClub && newClub && (
               <div className="rounded-lg bg-muted p-4">
@@ -216,11 +340,11 @@ export function AdminClubChangeForm() {
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     <div className="text-right">
-                      <p className="text-sm">₦{currentClub.fee.toLocaleString()}</p>
+                      <p className="text-sm">₦{(currentClub.fee || 0).toLocaleString()}</p>
                     </div>
                     <ArrowRightIcon className="mx-2 h-4 w-4" />
                     <div>
-                      <p className="text-sm">₦{newClub.fee.toLocaleString()}</p>
+                      <p className="text-sm">₦{(newClub.fee || 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -247,7 +371,16 @@ export function AdminClubChangeForm() {
             />
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting || isSuccess}>
+              <Button 
+                type="submit" 
+                disabled={
+                  isSubmitting || 
+                  isSuccess || 
+                  !form.getValues("studentId") || 
+                  !currentClub || 
+                  !form.getValues("newClubId")
+                }
+              >
                 {isSubmitting ? "Processing..." : isSuccess ? "Submitted Successfully!" : "Submit Change Request"}
               </Button>
             </div>

@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CalendarIcon, Copy, Edit, Eye, MoreHorizontal, Plus, Trash } from "lucide-react"
-import { format, addDays, differenceInDays } from "date-fns"
+import { format, addDays, differenceInDays, addYears } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -27,127 +27,109 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 
-// Mock data for fines
-const mockFines = [
+// Types
+type Fine = {
+  id: number
+  name: string
+  rate: number
+  type: "percentage" | "fixed" | "daily"
+}
+
+type Term = {
+  id: number
+  name: string
+  startDate: Date
+  endDate: Date
+  dueDate: Date
+  publishDate: Date
+  fineId: number | null
+  allowFineWaiver: boolean
+  isActive: boolean
+}
+
+type FeeTerm = {
+  id: number
+  name: string
+  description: string
+  startDate: Date
+  endDate: Date
+  numberOfTerms: number
+  terms: Term[]
+  isActive: boolean
+}
+
+// LocalStorage keys
+const STORAGE_KEYS = {
+  FEE_TERMS: "feeTerms",
+  FINES: "fines"
+}
+
+// Default data for fines
+const defaultFines: Fine[] = [
   { id: 1, name: "Late Payment Fine - 5%", rate: 5, type: "percentage" },
   { id: 2, name: "Late Payment Fine - 10%", rate: 10, type: "percentage" },
   { id: 3, name: "Late Payment Fine - Fixed", rate: 1000, type: "fixed" },
   { id: 4, name: "Overdue Fine - Daily", rate: 100, type: "daily" },
 ]
 
-// Mock data for fee terms
-const mockFeeTerms = [
-  {
-    id: 1,
-    name: "2023-24 Academic Year",
-    description: "Academic year 2023-24",
-    startDate: new Date(2023, 5, 1), // June 1, 2023
-    endDate: new Date(2024, 4, 31), // May 31, 2024
-    numberOfTerms: 3,
-    terms: [
-      {
-        id: 1,
-        name: "Term 1",
-        startDate: new Date(2023, 5, 1), // June 1, 2023
-        endDate: new Date(2023, 8, 30), // September 30, 2023
-        dueDate: new Date(2023, 5, 15), // June 15, 2023
-        publishDate: new Date(2023, 4, 15), // May 15, 2023
-        fineId: 1,
-        allowFineWaiver: true,
-        isActive: true,
-      },
-      {
-        id: 2,
-        name: "Term 2",
-        startDate: new Date(2023, 9, 1), // October 1, 2023
-        endDate: new Date(2023, 11, 31), // December 31, 2023
-        dueDate: new Date(2023, 9, 15), // October 15, 2023
-        publishDate: new Date(2023, 8, 15), // September 15, 2023
-        fineId: 1,
-        allowFineWaiver: true,
-        isActive: true,
-      },
-      {
-        id: 3,
-        name: "Term 3",
-        startDate: new Date(2024, 0, 1), // January 1, 2024
-        endDate: new Date(2024, 4, 31), // May 31, 2024
-        dueDate: new Date(2024, 0, 15), // January 15, 2024
-        publishDate: new Date(2023, 11, 15), // December 15, 2023
-        fineId: 1,
-        allowFineWaiver: true,
-        isActive: true,
-      },
-    ],
-    isActive: true,
-  },
-  {
-    id: 2,
-    name: "2022-23 Academic Year",
-    description: "Academic year 2022-23",
-    startDate: new Date(2022, 5, 1), // June 1, 2022
-    endDate: new Date(2023, 4, 31), // May 31, 2023
-    numberOfTerms: 3,
-    terms: [
-      {
-        id: 1,
-        name: "Term 1",
-        startDate: new Date(2022, 5, 1), // June 1, 2022
-        endDate: new Date(2022, 8, 30), // September 30, 2022
-        dueDate: new Date(2022, 5, 15), // June 15, 2022
-        publishDate: new Date(2022, 4, 15), // May 15, 2022
-        fineId: 2,
-        allowFineWaiver: false,
-        isActive: false,
-      },
-      {
-        id: 2,
-        name: "Term 2",
-        startDate: new Date(2022, 9, 1), // October 1, 2022
-        endDate: new Date(2022, 11, 31), // December 31, 2022
-        dueDate: new Date(2022, 9, 15), // October 15, 2022
-        publishDate: new Date(2022, 8, 15), // September 15, 2022
-        fineId: 2,
-        allowFineWaiver: false,
-        isActive: false,
-      },
-      {
-        id: 3,
-        name: "Term 3",
-        startDate: new Date(2023, 0, 1), // January 1, 2023
-        endDate: new Date(2023, 4, 31), // May 31, 2023
-        dueDate: new Date(2023, 0, 15), // January 15, 2023
-        publishDate: new Date(2022, 11, 15), // December 15, 2022
-        fineId: 2,
-        allowFineWaiver: false,
-        isActive: false,
-      },
-    ],
-    isActive: false,
-  },
-]
+// Default data for fee terms
+const defaultFeeTerms: FeeTerm[] = []
 
 export function FeeTerm() {
-  const [feeTerms, setFeeTerms] = useState(mockFeeTerms)
+  // Load data from localStorage or use defaults
+  const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue
+    const stored = localStorage.getItem(key)
+    return stored ? JSON.parse(stored) : defaultValue
+  }
+
+  // Initialize state with localStorage data
+  const [fines, setFines] = useState<Fine[]>(() => loadFromLocalStorage(STORAGE_KEYS.FINES, defaultFines))
+  const [feeTerms, setFeeTerms] = useState<FeeTerm[]>(() => {
+    const loaded = loadFromLocalStorage(STORAGE_KEYS.FEE_TERMS, defaultFeeTerms)
+    // Convert string dates back to Date objects
+    return loaded.map(term => ({
+      ...term,
+      startDate: new Date(term.startDate),
+      endDate: new Date(term.endDate),
+      terms: term.terms.map(t => ({
+        ...t,
+        startDate: new Date(t.startDate),
+        endDate: new Date(t.endDate),
+        dueDate: new Date(t.dueDate),
+        publishDate: new Date(t.publishDate)
+      }))
+    }))
+  })
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.FEE_TERMS, JSON.stringify(feeTerms))
+  }, [feeTerms])
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.FINES, JSON.stringify(fines))
+  }, [fines])
+
   const [showAddForm, setShowAddForm] = useState(false)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false)
-  const [selectedTerm, setSelectedTerm] = useState<any>(null)
+  const [selectedTerm, setSelectedTerm] = useState<FeeTerm | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [cloneSource, setCloneSource] = useState<any>(null)
-  const [clonePreview, setClonePreview] = useState<any>(null)
+  const [cloneSource, setCloneSource] = useState<FeeTerm | null>(null)
+  const [clonePreview, setClonePreview] = useState<FeeTerm | null>(null)
   const [selectedTab, setSelectedTab] = useState("all")
 
   // New term state
-  const [newTerm, setNewTerm] = useState({
+  const [newTerm, setNewTerm] = useState<Omit<FeeTerm, 'id'>>({
     name: "",
     description: "",
     startDate: new Date(),
-    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    endDate: addDays(new Date(), 365), // Exactly 365 days from start
     numberOfTerms: 3,
     isActive: true,
-    terms: [] as any[],
+    terms: [],
   })
 
   // Clone term state
@@ -155,57 +137,58 @@ export function FeeTerm() {
     name: "",
     description: "",
     startDate: new Date(),
-    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    endDate: addDays(new Date(), 365), // Exactly 365 days from start
     adjustDates: true,
     preserveFines: true,
     isActive: true,
   })
 
-  // Memoize filtered fee terms
-  const filteredFeeTerms = useMemo(() => {
-    if (selectedTab === "all") return feeTerms
-    return feeTerms.filter((feeTerm) => (selectedTab === "active" ? feeTerm.isActive : !feeTerm.isActive))
-  }, [feeTerms, selectedTab])
+  // Update end date when start date changes to maintain 365-day duration
+  useEffect(() => {
+    setNewTerm(prev => ({
+      ...prev,
+      endDate: addDays(prev.startDate, 365)
+    }))
+  }, [newTerm.startDate])
+
+  // Update clone end date when clone start date changes to maintain 365-day duration
+  useEffect(() => {
+    setCloneTerm(prev => ({
+      ...prev,
+      endDate: addDays(prev.startDate, 365)
+    }))
+  }, [cloneTerm.startDate])
 
   // Generate term installments based on number of terms
   useEffect(() => {
     if (newTerm.numberOfTerms > 0 && newTerm.startDate && newTerm.endDate) {
-      const totalDays = Math.floor((newTerm.endDate.getTime() - newTerm.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      const totalDays = differenceInDays(newTerm.endDate, newTerm.startDate)
       const daysPerTerm = Math.floor(totalDays / newTerm.numberOfTerms)
 
-      const terms = []
+      const terms: Term[] = []
       for (let i = 0; i < newTerm.numberOfTerms; i++) {
-        const termStartDate = new Date(newTerm.startDate)
-        termStartDate.setDate(termStartDate.getDate() + i * daysPerTerm)
+        const termStartDate = addDays(newTerm.startDate, i * daysPerTerm)
+        const termEndDate = i === newTerm.numberOfTerms - 1 
+          ? newTerm.endDate 
+          : addDays(termStartDate, daysPerTerm - 1)
 
-        const termEndDate = new Date(termStartDate)
-        if (i === newTerm.numberOfTerms - 1) {
-          // Last term ends on the academic year end date
-          termEndDate.setTime(newTerm.endDate.getTime())
-        } else {
-          termEndDate.setDate(termStartDate.getDate() + daysPerTerm - 1)
-        }
-
-        const dueDate = new Date(termStartDate)
-        dueDate.setDate(dueDate.getDate() + 14) // Due date is 2 weeks after start
-
-        const publishDate = new Date(termStartDate)
-        publishDate.setDate(publishDate.getDate() - 14) // Publish 2 weeks before start
+        const dueDate = addDays(termStartDate, 14) // Due date is 2 weeks after start
+        const publishDate = addDays(termStartDate, -14) // Publish 2 weeks before start
 
         terms.push({
           id: i + 1,
           name: `Term ${i + 1}`,
           startDate: termStartDate,
           endDate: termEndDate,
-          dueDate: dueDate,
-          publishDate: publishDate,
+          dueDate,
+          publishDate,
           fineId: null,
           allowFineWaiver: false,
           isActive: true,
         })
       }
 
-      setNewTerm((prev) => ({ ...prev, terms }))
+      setNewTerm(prev => ({ ...prev, terms }))
     }
   }, [newTerm.numberOfTerms, newTerm.startDate, newTerm.endDate])
 
@@ -222,7 +205,7 @@ export function FeeTerm() {
 
       const scaleFactor = targetDuration / sourceDuration
 
-      const previewTerms = cloneSource.terms.map((term: any, index: number) => {
+      const previewTerms = cloneSource.terms.map((term, index) => {
         // Calculate relative position in the source academic year (0 to 1)
         const termStartRelativePos = differenceInDays(term.startDate, sourceStartDate) / sourceDuration
         const termEndRelativePos = differenceInDays(term.endDate, sourceStartDate) / sourceDuration
@@ -259,9 +242,9 @@ export function FeeTerm() {
   }, [cloneSource, cloneTerm])
 
   const handleAddFeeTerm = useCallback(() => {
-    const newFeeTerm = {
+    const newFeeTerm: FeeTerm = {
       ...newTerm,
-      id: feeTerms.length + 1,
+      id: Math.max(...feeTerms.map(term => term.id), 0) + 1,
     }
 
     setFeeTerms([...feeTerms, newFeeTerm])
@@ -269,7 +252,7 @@ export function FeeTerm() {
       name: "",
       description: "",
       startDate: new Date(),
-      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      endDate: addDays(new Date(), 365),
       numberOfTerms: 3,
       isActive: true,
       terms: [],
@@ -284,23 +267,20 @@ export function FeeTerm() {
     [feeTerms],
   )
 
-  const handleViewTermDetails = useCallback((feeTerm: any) => {
+  const handleViewTermDetails = useCallback((feeTerm: FeeTerm) => {
     setSelectedTerm(feeTerm)
     setIsViewDialogOpen(true)
   }, [])
 
-  const startEdit = useCallback((feeTerm: any) => {
+  const startEdit = useCallback((feeTerm: FeeTerm) => {
     setSelectedTerm({ ...feeTerm })
     setEditingId(feeTerm.id)
     setIsEditDialogOpen(true)
   }, [])
 
-  const startClone = useCallback((feeTerm: any) => {
-    const nextYear = new Date(feeTerm.startDate)
-    nextYear.setFullYear(nextYear.getFullYear() + 1)
-
-    const nextYearEnd = new Date(feeTerm.endDate)
-    nextYearEnd.setFullYear(nextYearEnd.getFullYear() + 1)
+  const startClone = useCallback((feeTerm: FeeTerm) => {
+    const nextYear = addYears(feeTerm.startDate, 1)
+    const nextYearEnd = addYears(feeTerm.endDate, 1)
 
     // Extract the academic year from the name (e.g., "2023-24" from "2023-24 Academic Year")
     const currentYearMatch = feeTerm.name.match(/(\d{4})-(\d{2})/)
@@ -338,9 +318,9 @@ export function FeeTerm() {
 
   const handleCloneFeeTerm = useCallback(() => {
     if (clonePreview) {
-      const newFeeTerm = {
+      const newFeeTerm: FeeTerm = {
         ...clonePreview,
-        id: feeTerms.length + 1,
+        id: Math.max(...feeTerms.map(term => term.id), 0) + 1,
       }
 
       setFeeTerms([...feeTerms, newFeeTerm])
@@ -350,7 +330,7 @@ export function FeeTerm() {
         name: "",
         description: "",
         startDate: new Date(),
-        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        endDate: addDays(new Date(), 365),
         adjustDates: true,
         preserveFines: true,
         isActive: true,
@@ -383,9 +363,15 @@ export function FeeTerm() {
 
   const getFineNameById = (fineId: number | null) => {
     if (!fineId) return "None"
-    const fine = mockFines.find((f) => f.id === fineId)
+    const fine = fines.find((f) => f.id === fineId)
     return fine ? fine.name : "Unknown Fine"
   }
+
+  // Memoize filtered fee terms
+  const filteredFeeTerms = useMemo(() => {
+    if (selectedTab === "all") return feeTerms
+    return feeTerms.filter((feeTerm) => (selectedTab === "active" ? feeTerm.isActive : !feeTerm.isActive))
+  }, [feeTerms, selectedTab])
 
   return (
     <Card>
@@ -643,7 +629,7 @@ export function FeeTerm() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="none">None</SelectItem>
-                                    {mockFines.map((fine) => (
+                                    {fines.map((fine) => (
                                       <SelectItem key={fine.id} value={fine.id.toString()}>
                                         {fine.name}
                                       </SelectItem>
@@ -930,59 +916,77 @@ export function FeeTerm() {
               </div>
 
               <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Term Name</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Publish Date</TableHead>
-                      <TableHead>Fine</TableHead>
-                      <TableHead>Fine Waiver</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedTerm.terms.map((term: any) => (
-                      <TableRow key={term.id}>
-                        <TableCell className="font-medium">{term.name}</TableCell>
-                        <TableCell>{format(term.startDate, "MMM d, yyyy")}</TableCell>
-                        <TableCell>{format(term.endDate, "MMM d, yyyy")}</TableCell>
-                        <TableCell>{format(term.dueDate, "MMM d, yyyy")}</TableCell>
-                        <TableCell>{format(term.publishDate, "MMM d, yyyy")}</TableCell>
-                        <TableCell>{getFineNameById(term.fineId)}</TableCell>
-                        <TableCell>{term.allowFineWaiver ? "Allowed" : "Not Allowed"}</TableCell>
-                        <TableCell>
-                          {term.isActive ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-                              Inactive
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="p-4">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Term Installments</h3>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Publish Date</TableHead>
+                          <TableHead>Fine</TableHead>
+                          <TableHead>Fine Waiver</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedTerm.terms.map((term, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{term.name}</TableCell>
+                            <TableCell>{format(term.startDate, "MMM d, yyyy")}</TableCell>
+                            <TableCell>{format(term.endDate, "MMM d, yyyy")}</TableCell>
+                            <TableCell>{format(term.dueDate, "MMM d, yyyy")}</TableCell>
+                            <TableCell>{format(term.publishDate, "MMM d, yyyy")}</TableCell>
+                            <TableCell>{getFineNameById(term.fineId)}</TableCell>
+                            <TableCell>
+                              {term.allowFineWaiver ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  Allowed
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                                  Not Allowed
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {term.isActive ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                                  Inactive
+                                </Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
             </div>
           )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Term Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Academic Year</DialogTitle>
-            <DialogDescription>Modify the details of this academic year and its terms</DialogDescription>
+            <DialogTitle>Edit Academic Year - {selectedTerm?.name}</DialogTitle>
+            <DialogDescription>Make changes to this academic year and its terms</DialogDescription>
           </DialogHeader>
           {selectedTerm && (
-            <div className="grid gap-6">
+            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-name">Term Name</Label>
@@ -1002,7 +1006,7 @@ export function FeeTerm() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-startDate">Academic Year Start Date</Label>
                   <Popover>
@@ -1053,14 +1057,15 @@ export function FeeTerm() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="flex items-center space-x-2 self-end">
-                  <Switch
-                    id="edit-active"
-                    checked={selectedTerm.isActive}
-                    onCheckedChange={(checked) => setSelectedTerm({ ...selectedTerm, isActive: checked })}
-                  />
-                  <Label htmlFor="edit-active">Active</Label>
-                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-active"
+                  checked={selectedTerm.isActive}
+                  onCheckedChange={(checked) => setSelectedTerm({ ...selectedTerm, isActive: checked })}
+                />
+                <Label htmlFor="edit-active">Active</Label>
               </div>
 
               <div className="mt-6">
@@ -1076,11 +1081,11 @@ export function FeeTerm() {
                         <TableHead>Publish Date</TableHead>
                         <TableHead>Fine</TableHead>
                         <TableHead>Fine waive off allowed</TableHead>
-                        <TableHead>Active</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedTerm.terms.map((term: any, index: number) => (
+                      {selectedTerm.terms.map((term, index) => (
                         <TableRow key={index}>
                           <TableCell>
                             <Input
@@ -1197,7 +1202,7 @@ export function FeeTerm() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">None</SelectItem>
-                                {mockFines.map((fine) => (
+                                {fines.map((fine) => (
                                   <SelectItem key={fine.id} value={fine.id.toString()}>
                                     {fine.name}
                                   </SelectItem>
@@ -1208,10 +1213,12 @@ export function FeeTerm() {
                           <TableCell className="text-center">
                             <Switch
                               checked={term.allowFineWaiver}
-                              onCheckedChange={(checked) => updateEditingTermDetail(index, "allowFineWaiver", checked)}
+                              onCheckedChange={(checked) =>
+                                updateEditingTermDetail(index, "allowFineWaiver", checked)
+                              }
                             />
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell>
                             <Switch
                               checked={term.isActive}
                               onCheckedChange={(checked) => updateEditingTermDetail(index, "isActive", checked)}
@@ -1234,35 +1241,24 @@ export function FeeTerm() {
         </DialogContent>
       </Dialog>
 
-      {/* Clone Dialog */}
+      {/* Clone Term Dialog */}
       <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Clone Academic Year</DialogTitle>
-            <DialogDescription>Create a new academic year based on {cloneSource?.name}</DialogDescription>
+            <DialogDescription>
+              Create a new academic year based on "{cloneSource?.name}"
+            </DialogDescription>
           </DialogHeader>
           {cloneSource && (
-            <div className="grid gap-6">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Clone Academic Year</AlertTitle>
-                <AlertDescription>
-                  This will create a new academic year with the same structure as the selected one, but with updated
-                  dates.
-                </AlertDescription>
-              </Alert>
-
+            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="clone-name" className="flex items-center">
-                    New Academic Year Name <span className="text-red-500 ml-1">*</span>
-                  </Label>
+                  <Label htmlFor="clone-name">New Academic Year Name</Label>
                   <Input
                     id="clone-name"
                     value={cloneTerm.name}
                     onChange={(e) => setCloneTerm({ ...cloneTerm, name: e.target.value })}
-                    placeholder="e.g., 2024-25 Academic Year"
-                    required
                   />
                 </div>
                 <div className="grid gap-2">
@@ -1271,7 +1267,6 @@ export function FeeTerm() {
                     id="clone-description"
                     value={cloneTerm.description}
                     onChange={(e) => setCloneTerm({ ...cloneTerm, description: e.target.value })}
-                    placeholder="Brief description of the academic year"
                   />
                 </div>
               </div>
@@ -1331,25 +1326,21 @@ export function FeeTerm() {
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="adjust-dates"
+                  <Switch
+                    id="clone-adjust-dates"
                     checked={cloneTerm.adjustDates}
-                    onCheckedChange={(checked) => setCloneTerm({ ...cloneTerm, adjustDates: checked === true })}
+                    onCheckedChange={(checked) => setCloneTerm({ ...cloneTerm, adjustDates: checked })}
                   />
-                  <Label htmlFor="adjust-dates">
-                    Adjust term dates proportionally to fit new academic year timeframe
-                  </Label>
+                  <Label htmlFor="clone-adjust-dates">Adjust term dates proportionally</Label>
                 </div>
-
                 <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="preserve-fines"
+                  <Switch
+                    id="clone-preserve-fines"
                     checked={cloneTerm.preserveFines}
-                    onCheckedChange={(checked) => setCloneTerm({ ...cloneTerm, preserveFines: checked === true })}
+                    onCheckedChange={(checked) => setCloneTerm({ ...cloneTerm, preserveFines: checked })}
                   />
-                  <Label htmlFor="preserve-fines">Preserve fine settings from original terms</Label>
+                  <Label htmlFor="clone-preserve-fines">Preserve fine settings</Label>
                 </div>
-
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="clone-active"
@@ -1362,32 +1353,53 @@ export function FeeTerm() {
 
               {clonePreview && (
                 <div className="mt-6">
-                  <h3 className="text-lg font-medium mb-4">Preview of Cloned Terms</h3>
-                  <div className="rounded-md border overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Term Name</TableHead>
-                          <TableHead>Start Date</TableHead>
-                          <TableHead>End Date</TableHead>
-                          <TableHead>Due Date</TableHead>
-                          <TableHead>Publish Date</TableHead>
-                          <TableHead>Fine</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {clonePreview.terms.map((term: any, index: number) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{term.name}</TableCell>
-                            <TableCell>{format(term.startDate, "MMM d, yyyy")}</TableCell>
-                            <TableCell>{format(term.endDate, "MMM d, yyyy")}</TableCell>
-                            <TableCell>{format(term.dueDate, "MMM d, yyyy")}</TableCell>
-                            <TableCell>{format(term.publishDate, "MMM d, yyyy")}</TableCell>
-                            <TableCell>{getFineNameById(term.fineId)}</TableCell>
+                  <h3 className="text-lg font-medium mb-2">Preview</h3>
+                  <div className="rounded-md border p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Academic Year</h4>
+                        <p className="font-medium">{clonePreview.name}</p>
+                        <p className="text-sm text-muted-foreground">{clonePreview.description}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground">Duration</h4>
+                        <p className="text-sm">
+                          {format(clonePreview.startDate, "MMM d, yyyy")} -{" "}
+                          {format(clonePreview.endDate, "MMM d, yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Term</TableHead>
+                            <TableHead>Start Date</TableHead>
+                            <TableHead>End Date</TableHead>
+                            <TableHead>Due Date</TableHead>
+                            <TableHead>Fine</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {clonePreview.terms.slice(0, 3).map((term, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{term.name}</TableCell>
+                              <TableCell>{format(term.startDate, "MMM d, yyyy")}</TableCell>
+                              <TableCell>{format(term.endDate, "MMM d, yyyy")}</TableCell>
+                              <TableCell>{format(term.dueDate, "MMM d, yyyy")}</TableCell>
+                              <TableCell>{getFineNameById(term.fineId)}</TableCell>
+                            </TableRow>
+                          ))}
+                          {clonePreview.terms.length > 3 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                + {clonePreview.terms.length - 3} more terms
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1397,7 +1409,7 @@ export function FeeTerm() {
             <Button variant="outline" onClick={() => setIsCloneDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCloneFeeTerm} disabled={!cloneTerm.name || !clonePreview}>
+            <Button onClick={handleCloneFeeTerm} disabled={!cloneTerm.name}>
               Clone Academic Year
             </Button>
           </DialogFooter>

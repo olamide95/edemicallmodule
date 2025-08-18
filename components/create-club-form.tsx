@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,6 +20,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PlusIcon, TrashIcon, ImageIcon, AlertTriangleIcon } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useRouter } from "next/navigation"
+import { v4 as uuidv4 } from 'uuid'
 
 interface Variant {
   id: string
@@ -34,15 +34,29 @@ interface TimeSlot {
   endTime: string
 }
 
-// Mock existing clubs for conflict checking
-const existingClubs = [
-  { id: 1, name: "Chess Club", day: "Monday", startTime: "14:00", endTime: "15:00" },
-  { id: 2, name: "Debate Club", day: "Monday", startTime: "15:00", endTime: "16:00" },
-  { id: 3, name: "Science Club", day: "Tuesday", startTime: "14:00", endTime: "15:00" },
-  { id: 4, name: "Art Club", day: "Tuesday", startTime: "15:00", endTime: "16:00" },
-]
+interface Employee {
+  id?: string
+  name: string
+  email: string
+  phone: string
+  department: string
+  subDepartment: string
+  class: string
+  branch: string
+  customDepartment?: string
+  customSubDepartment?: string
+}
+
+interface Vendor {
+  id: string
+  name: string
+  contactPerson: string
+  email: string
+  phone: string
+}
 
 export function CreateClubForm() {
+  const router = useRouter()
   const [variants, setVariants] = useState<Variant[]>([])
   const [newVariant, setNewVariant] = useState({ name: "", amount: 0 })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -54,6 +68,14 @@ export function CreateClubForm() {
   const [coordinatorType, setCoordinatorType] = useState("in-house")
   const [timeSlots, setTimeSlots] = useState<{ [key: string]: TimeSlot }>({})
   const [timeConflicts, setTimeConflicts] = useState<{ [key: string]: any[] }>({})
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    baseAmount: 0,
+    status: "active",
+  })
 
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
   const terms = ["1st Term", "2nd Term", "3rd Term"]
@@ -68,18 +90,60 @@ export function CreateClubForm() {
     { name: "Coding Club", path: "/placeholder.svg?height=200&width=200" },
   ]
 
-  const checkTimeConflicts = (day: string, startTime: string, endTime: string) => {
-    const conflicts = existingClubs.filter((club) => {
-      if (club.day !== day) return false
+  // Load employees and vendors from localStorage
+  useEffect(() => {
+    const savedEmployees = localStorage.getItem('employees')
+    if (savedEmployees) {
+      setEmployees(JSON.parse(savedEmployees))
+    }
 
-      const clubStart = club.startTime
-      const clubEnd = club.endTime
+    const savedVendors = localStorage.getItem('vendors')
+    if (savedVendors) {
+      setVendors(JSON.parse(savedVendors))
+    } else {
+      // Initialize with some sample vendors if none exist
+      const defaultVendors = [
+        {
+          id: uuidv4(),
+          name: "Chess Masters Inc.",
+          contactPerson: "John Chessman",
+          email: "john@chessmasters.com",
+          phone: "08012345678"
+        },
+        {
+          id: uuidv4(),
+          name: "Science Explorers Ltd.",
+          contactPerson: "Sarah Scientist",
+          email: "sarah@scienceexplorers.com",
+          phone: "08023456789"
+        },
+        {
+          id: uuidv4(),
+          name: "Art Studio Academy",
+          contactPerson: "Michael Artist",
+          email: "michael@artstudio.com",
+          phone: "08034567890"
+        }
+      ]
+      setVendors(defaultVendors)
+      localStorage.setItem('vendors', JSON.stringify(defaultVendors))
+    }
+  }, [])
+
+  const checkTimeConflicts = (day: string, startTime: string, endTime: string) => {
+    const savedClubs = localStorage.getItem('clubs')
+    if (!savedClubs) return []
+
+    const existingClubs = JSON.parse(savedClubs)
+    return existingClubs.filter((club: any) => {
+      if (club.day !== day || club.status !== "active") return false
+
+      const clubStart = club.timeSlot.split('-')[0]
+      const clubEnd = club.timeSlot.split('-')[1]
 
       // Check for time overlap
       return startTime < clubEnd && endTime > clubStart
     })
-
-    return conflicts
   }
 
   const handleTimeChange = (day: string, field: "startTime" | "endTime", value: string) => {
@@ -145,11 +209,76 @@ export function CreateClubForm() {
     setClubImage(imagePath.split("/").pop() || null)
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === "baseAmount" ? Number(value) : value
+    }))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Submit data to backend
-    alert("Club created successfully!")
-    // Reset form or redirect
+
+    // Validate form
+    if (!formData.name || selectedDays.length === 0 || !selectedTerms.length || !selectedClasses.length) {
+      alert("Please fill all required fields")
+      return
+    }
+
+    // Prepare time slots
+    const schedule = selectedDays.map(day => ({
+      day,
+      time: `${timeSlots[day]?.startTime || ''} - ${timeSlots[day]?.endTime || ''}`,
+      timeSlot: `${timeSlots[day]?.startTime || ''}-${timeSlots[day]?.endTime || ''}`
+    }))
+
+    // Get coordinator details
+    let coordinatorName = ""
+    let coordinatorId = ""
+    if (coordinatorType === "in-house") {
+      const selectedEmployee = employees.find(emp => emp.id === formData.coordinatorId)
+      if (selectedEmployee) {
+        coordinatorName = selectedEmployee.name
+        coordinatorId = selectedEmployee.id || ""
+      }
+    } else {
+      const selectedVendor = vendors.find(vendor => vendor.id === formData.coordinatorId)
+      if (selectedVendor) {
+        coordinatorName = selectedVendor.name
+        coordinatorId = selectedVendor.id
+      }
+    }
+
+    // Create new club object
+    const newClub = {
+      id: uuidv4(),
+      name: formData.name,
+      description: formData.description,
+      coordinator: coordinatorName,
+      coordinatorId,
+      type: coordinatorType === "in-house" ? "In-house" : "Vendor",
+      day: schedule[0].day, // Using first day as primary day
+      time: schedule[0].time,
+      timeSlot: schedule[0].timeSlot,
+      amount: formData.baseAmount,
+      students: 0, // Initial value
+      status: formData.status,
+      image: clubImage,
+      variants,
+      terms: selectedTerms,
+      classes: selectedClasses,
+      schedule // Store all scheduled days/times
+    }
+
+    // Save to localStorage
+    const savedClubs = localStorage.getItem('clubs')
+    const existingClubs = savedClubs ? JSON.parse(savedClubs) : []
+    const updatedClubs = [...existingClubs, newClub]
+    localStorage.setItem('clubs', JSON.stringify(updatedClubs))
+
+    // Redirect to clubs list
+    router.push('/admin/clubs')
   }
 
   return (
@@ -165,8 +294,15 @@ export function CreateClubForm() {
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Club Name</Label>
-                <Input id="name" placeholder="Enter club name" required />
+                <Label htmlFor="name">Club Name *</Label>
+                <Input 
+                  id="name" 
+                  name="name"
+                  placeholder="Enter club name" 
+                  required 
+                  value={formData.name}
+                  onChange={handleInputChange}
+                />
               </div>
 
               <div className="space-y-2">
@@ -228,14 +364,21 @@ export function CreateClubForm() {
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
+                  name="description"
                   placeholder="What is this club about? What activities will students participate in?"
                   className="min-h-32"
+                  value={formData.description}
+                  onChange={handleInputChange}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="coordinator-type">Club Coordinator</Label>
-                <Select defaultValue="in-house" onValueChange={(value) => setCoordinatorType(value)}>
+                <Label htmlFor="coordinator-type">Club Coordinator *</Label>
+                <Select 
+                  defaultValue="in-house" 
+                  onValueChange={(value) => setCoordinatorType(value)}
+                  required
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select coordinator type" />
                   </SelectTrigger>
@@ -248,9 +391,12 @@ export function CreateClubForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="coordinator">
-                  {coordinatorType === "in-house" ? "Select Coordinator" : "Select Vendor"}
+                  {coordinatorType === "in-house" ? "Select Coordinator *" : "Select Vendor *"}
                 </Label>
-                <Select>
+                <Select
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, coordinatorId: value }))}
+                  required
+                >
                   <SelectTrigger>
                     <SelectValue
                       placeholder={coordinatorType === "in-house" ? "Select a coordinator" : "Select a vendor"}
@@ -258,34 +404,38 @@ export function CreateClubForm() {
                   </SelectTrigger>
                   <SelectContent>
                     {coordinatorType === "in-house" ? (
-                      <>
-                        <SelectItem value="1">John Doe</SelectItem>
-                        <SelectItem value="2">Jane Smith</SelectItem>
-                        <SelectItem value="3">Michael Johnson</SelectItem>
-                      </>
+                      employees.length > 0 ? (
+                        employees.map((employee) => (
+                          <SelectItem key={employee.id || employee.email} value={employee.id || employee.email}>
+                            {employee.name} ({employee.department || employee.customDepartment})
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>No employees found</SelectItem>
+                      )
                     ) : (
-                      <>
-                        <SelectItem value="v1">Chess Masters Inc.</SelectItem>
-                        <SelectItem value="v2">Science Explorers Ltd.</SelectItem>
-                        <SelectItem value="v3">Art Studio Academy</SelectItem>
-                        <SelectItem value="v4">Robotics Innovations</SelectItem>
-                        <SelectItem value="v5">Music Maestros</SelectItem>
-                      </>
+                      vendors.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.name} ({vendor.contactPerson})
+                        </SelectItem>
+                      ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="assistant">Assistant Coordinator</Label>
-                <Select>
+                <Label htmlFor="status">Status</Label>
+                <Select 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as "active" | "inactive" }))}
+                  defaultValue="active"
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an assistant (optional)" />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">John Doe</SelectItem>
-                    <SelectItem value="2">Jane Smith</SelectItem>
-                    <SelectItem value="3">Michael Johnson</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -297,7 +447,7 @@ export function CreateClubForm() {
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
-                <Label>Days of the Week</Label>
+                <Label>Days of the Week *</Label>
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
                   {daysOfWeek.map((day) => (
                     <div key={day} className="flex items-center space-x-2">
@@ -317,7 +467,7 @@ export function CreateClubForm() {
               {/* Time slots for each selected day */}
               {selectedDays.map((day) => (
                 <div key={day} className="space-y-4 p-4 border rounded-md">
-                  <h4 className="font-medium">{day} Schedule</h4>
+                  <h4 className="font-medium">{day} Schedule *</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor={`start-time-${day}`}>Start Time</Label>
@@ -326,6 +476,7 @@ export function CreateClubForm() {
                         type="time"
                         value={timeSlots[day]?.startTime || ""}
                         onChange={(e) => handleTimeChange(day, "startTime", e.target.value)}
+                        required
                       />
                     </div>
 
@@ -336,6 +487,7 @@ export function CreateClubForm() {
                         type="time"
                         value={timeSlots[day]?.endTime || ""}
                         onChange={(e) => handleTimeChange(day, "endTime", e.target.value)}
+                        required
                       />
                     </div>
                   </div>
@@ -349,7 +501,7 @@ export function CreateClubForm() {
                         <ul className="mt-1 ml-4 list-disc">
                           {timeConflicts[day].map((club) => (
                             <li key={club.id}>
-                              {club.name} ({club.startTime} - {club.endTime})
+                              {club.name} ({club.time})
                             </li>
                           ))}
                         </ul>
@@ -363,7 +515,7 @@ export function CreateClubForm() {
               ))}
 
               <div className="space-y-2">
-                <Label>Terms</Label>
+                <Label>Terms *</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {terms.map((term) => (
                     <div key={term} className="flex items-center space-x-2">
@@ -381,7 +533,7 @@ export function CreateClubForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Eligible Classes</Label>
+                <Label>Eligible Classes *</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {classes.map((cls) => (
                     <div key={cls} className="flex items-center space-x-2">
@@ -405,10 +557,21 @@ export function CreateClubForm() {
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Base Amount</Label>
+                <Label htmlFor="baseAmount">Base Amount *</Label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3">₦</span>
-                  <Input id="amount" type="number" min="0" step="0.01" placeholder="0.00" className="pl-6" />
+                  <Input 
+                    id="baseAmount" 
+                    name="baseAmount"
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    className="pl-6" 
+                    value={formData.baseAmount}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground">Base fee for club enrollment (per term)</p>
               </div>
@@ -494,7 +657,7 @@ export function CreateClubForm() {
       </Tabs>
 
       <div className="mt-6 flex justify-end space-x-4">
-        <Button variant="outline" type="button">
+        <Button variant="outline" type="button" onClick={() => router.push('/admin/clubs')}>
           Cancel
         </Button>
         <Button type="submit">Create Club</Button>

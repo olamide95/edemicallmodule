@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,34 +12,105 @@ import { Badge } from "@/components/ui/badge"
 import { Search, FileText, Download, Filter } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 
+// Local storage keys
+const STORAGE_KEYS = {
+  FEE_DISTRIBUTIONS: "feeDistributions",
+  CLASSES: "classes",
+  STUDENTS: "admissionFormResponses"
+}
+
+interface FeeDistribution {
+  id: string
+  name: string
+  academicYear: string
+  term: string
+  classes: string[]
+  feeHeads: string[]
+  status: "active" | "archived" | "draft"
+  lastUpdated: string
+}
+
+interface Student {
+  id: string
+  firstName: string
+  lastName: string
+  class: string
+  status: string
+  admissionNumber?: string
+  [key: string]: any
+}
+
 export function FeeAssignment() {
   const [selectedDistribution, setSelectedDistribution] = useState("")
   const [selectedClass, setSelectedClass] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectAll, setSelectAll] = useState(false)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
+  const [distributions, setDistributions] = useState<FeeDistribution[]>([])
+  const [classes, setClasses] = useState<{label: string, value: string}[]>([])
+  const [students, setStudents] = useState<Student[]>([])
 
-  // Sample student data
-  const pendingStudents = Array.from({ length: 5 }).map((_, i) => ({
-    id: `STU${2023001 + i}`,
-    name: `Student Name ${i + 1}`,
-    class: `Grade ${Math.floor(Math.random() * 6) + 1}`,
-    feeAmount: (Math.floor(Math.random() * 50) + 50) * 1000,
-    status: "Pending",
-  }))
+  // Load data from localStorage
+  useEffect(() => {
+    const loadData = () => {
+      // Load distributions
+      const savedDistributions = localStorage.getItem(STORAGE_KEYS.FEE_DISTRIBUTIONS)
+      if (savedDistributions) {
+        setDistributions(JSON.parse(savedDistributions))
+      }
+
+      // Load classes
+      const savedClasses = localStorage.getItem(STORAGE_KEYS.CLASSES)
+      if (savedClasses) {
+        const classesData = JSON.parse(savedClasses)
+        const classOptions = classesData.map((cls: any) => ({
+          label: cls.name,
+          value: cls.name.toLowerCase().replace(/\s+/g, '-')
+        }))
+        setClasses(classOptions)
+      }
+
+      // Load students
+      const savedStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS)
+      if (savedStudents) {
+        const allStudents = JSON.parse(savedStudents)
+        const admittedStudents = allStudents
+          .filter((student: any) => student.status === "Admitted")
+          .map((student: any) => ({
+            id: student.id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            class: student.class || "Not assigned",
+            status: student.status,
+            admissionNumber: student.admissionNumber || `ADM-${student.id.slice(0, 8)}`
+          }))
+        setStudents(admittedStudents)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Filter pending students based on search and class
+  const pendingStudents = useMemo(() => {
+    return students.filter(student => student.status === "Admitted")
+  }, [students])
 
   // Memoize filtered students
   const filteredPendingStudents = useMemo(() => {
     if (!searchQuery && !selectedClass) return pendingStudents
 
     return pendingStudents.filter((student) => {
+      const fullName = `${student.firstName} ${student.lastName}`
       const matchesSearch =
         !searchQuery ||
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.id.toLowerCase().includes(searchQuery.toLowerCase())
+        fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (student.admissionNumber && student.admissionNumber.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesClass =
-        !selectedClass || selectedClass === "all" || student.class.includes(selectedClass.replace("grade", "Grade "))
+        !selectedClass || 
+        selectedClass === "all" || 
+        student.class.toLowerCase() === selectedClass.toLowerCase()
 
       return matchesSearch && matchesClass
     })
@@ -50,12 +121,12 @@ export function FeeAssignment() {
     (checked: boolean) => {
       setSelectAll(checked)
       if (checked) {
-        setSelectedStudents(pendingStudents.map((student) => student.id))
+        setSelectedStudents(filteredPendingStudents.map((student) => student.id))
       } else {
         setSelectedStudents([])
       }
     },
-    [pendingStudents],
+    [filteredPendingStudents],
   )
 
   const handleSelectStudent = useCallback((studentId: string, checked: boolean) => {
@@ -65,6 +136,14 @@ export function FeeAssignment() {
       setSelectedStudents((prev) => prev.filter((id) => id !== studentId))
     }
   }, [])
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-NG", { 
+      style: "currency", 
+      currency: "NGN" 
+    }).format(amount).replace(/NGN/g, "₦")
+  }
 
   return (
     <Card>
@@ -76,14 +155,19 @@ export function FeeAssignment() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <Label htmlFor="distribution">Fee Distribution</Label>
-            <Select value={selectedDistribution} onValueChange={setSelectedDistribution}>
+            <Select 
+              value={selectedDistribution} 
+              onValueChange={setSelectedDistribution}
+            >
               <SelectTrigger id="distribution">
                 <SelectValue placeholder="Select Fee Distribution" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="dist1">2023-2024 Academic Year - Regular</SelectItem>
-                <SelectItem value="dist2">2023-2024 Academic Year - Scholarship</SelectItem>
-                <SelectItem value="dist3">2024-2025 Academic Year - Regular</SelectItem>
+                {distributions.map((dist) => (
+                  <SelectItem key={dist.id} value={dist.id}>
+                    {dist.name} ({dist.academicYear})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -96,12 +180,11 @@ export function FeeAssignment() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                <SelectItem value="grade1">Grade 1</SelectItem>
-                <SelectItem value="grade2">Grade 2</SelectItem>
-                <SelectItem value="grade3">Grade 3</SelectItem>
-                <SelectItem value="grade4">Grade 4</SelectItem>
-                <SelectItem value="grade5">Grade 5</SelectItem>
-                <SelectItem value="grade6">Grade 6</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.value} value={cls.value}>
+                    {cls.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -128,7 +211,9 @@ export function FeeAssignment() {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </Button>
-            <span className="text-sm text-muted-foreground">Showing 50 students</span>
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredPendingStudents.length} students
+            </span>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
@@ -155,7 +240,11 @@ export function FeeAssignment() {
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <div className="flex items-center">
-                      <Checkbox checked={selectAll} onCheckedChange={handleSelectAll} className="mr-2" />
+                      <Checkbox 
+                        checked={selectAll} 
+                        onCheckedChange={handleSelectAll} 
+                        className="mr-2" 
+                      />
                     </div>
                   </TableHead>
                   <TableHead>Student ID</TableHead>
@@ -167,28 +256,39 @@ export function FeeAssignment() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPendingStudents.map((student, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedStudents.includes(student.id)}
-                        onCheckedChange={(checked) => handleSelectStudent(student.id, checked === true)}
-                      />
-                    </TableCell>
-                    <TableCell>{student.id}</TableCell>
-                    <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell>{student.class}</TableCell>
-                    <TableCell>₦{student.feeAmount.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Pending</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        Assign
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredPendingStudents.map((student) => {
+                  // Get fee amount from selected distribution (simplified example)
+                  const feeAmount = selectedDistribution 
+                    ? 50000 // This would come from the actual distribution data
+                    : 0
+
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedStudents.includes(student.id)}
+                          onCheckedChange={(checked) => 
+                            handleSelectStudent(student.id, checked === true)
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>{student.admissionNumber}</TableCell>
+                      <TableCell className="font-medium">
+                        {student.firstName} {student.lastName}
+                      </TableCell>
+                      <TableCell>{student.class}</TableCell>
+                      <TableCell>{formatCurrency(feeAmount)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">Pending</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">
+                          Assign
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </TabsContent>
@@ -206,12 +306,15 @@ export function FeeAssignment() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.from({ length: 5 }).map((_, i) => (
+                {/* Example assigned students - would come from your data */}
+                {Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>STU{2023010 + i}</TableCell>
-                    <TableCell className="font-medium">Student Name {i + 10}</TableCell>
+                    <TableCell className="font-medium">
+                      Student Name {i + 10}
+                    </TableCell>
                     <TableCell>Grade {Math.floor(Math.random() * 6) + 1}</TableCell>
-                    <TableCell>₦{(Math.floor(Math.random() * 50) + 50) * 1000}</TableCell>
+                    <TableCell>{formatCurrency((Math.floor(Math.random() * 50) + 50) * 1000)}</TableCell>
                     <TableCell>{new Date().toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
@@ -237,14 +340,17 @@ export function FeeAssignment() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.from({ length: 3 }).map((_, i) => (
+                {/* Example exceptions - would come from your data */}
+                {Array.from({ length: 2 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell>STU{2023020 + i}</TableCell>
-                    <TableCell className="font-medium">Student Name {i + 20}</TableCell>
+                    <TableCell className="font-medium">
+                      Student Name {i + 20}
+                    </TableCell>
                     <TableCell>Grade {Math.floor(Math.random() * 6) + 1}</TableCell>
                     <TableCell>
-                      <Badge variant={["error", "warning", "info"][i]}>
-                        {["Scholarship", "Financial Aid", "Special Case"][i]}
+                      <Badge variant={i === 0 ? "error" : "warning"}>
+                        {i === 0 ? "Scholarship" : "Financial Aid"}
                       </Badge>
                     </TableCell>
                     <TableCell>Exception reason {i + 1}</TableCell>

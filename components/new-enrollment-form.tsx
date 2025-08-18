@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,56 +10,104 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BadgeAlertIcon, AlertTriangleIcon, ClockIcon } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { v4 as uuidv4 } from 'uuid'
 
-// Updated mock data for clubs with multiple clubs at same time slots
-const clubsByDay = {
-  Monday: [
-    { id: 1, name: "Chess Club", time: "2:00 PM - 3:00 PM", amount: 15000, timeSlot: "14:00-15:00" },
-    { id: 2, name: "Debate Club", time: "3:00 PM - 4:00 PM", amount: 18000, timeSlot: "15:00-16:00" },
-    { id: 11, name: "Math Club", time: "2:00 PM - 3:00 PM", amount: 16000, timeSlot: "14:00-15:00" },
-  ],
-  Tuesday: [
-    { id: 3, name: "Science Club", time: "2:00 PM - 3:00 PM", amount: 20000, timeSlot: "14:00-15:00" },
-    { id: 4, name: "Art Club", time: "3:00 PM - 4:00 PM", amount: 22000, timeSlot: "15:00-16:00" },
-    { id: 12, name: "Photography Club", time: "2:00 PM - 3:00 PM", amount: 24000, timeSlot: "14:00-15:00" },
-  ],
-  Wednesday: [
-    { id: 5, name: "Coding Club", time: "2:00 PM - 3:00 PM", amount: 25000, timeSlot: "14:00-15:00" },
-    { id: 6, name: "Drama Club", time: "3:00 PM - 4:00 PM", amount: 15000, timeSlot: "15:00-16:00" },
-    { id: 13, name: "Robotics Club", time: "2:00 PM - 3:00 PM", amount: 30000, timeSlot: "14:00-15:00" },
-  ],
-  Thursday: [
-    { id: 7, name: "Music Club", time: "2:00 PM - 3:00 PM", amount: 20000, timeSlot: "14:00-15:00" },
-    { id: 8, name: "Sports Club", time: "3:00 PM - 4:00 PM", amount: 18000, timeSlot: "15:00-16:00" },
-    { id: 14, name: "Dance Club", time: "2:00 PM - 3:00 PM", amount: 17000, timeSlot: "14:00-15:00" },
-  ],
-  Friday: [
-    { id: 9, name: "Language Club", time: "2:00 PM - 3:00 PM", amount: 15000, timeSlot: "14:00-15:00" },
-    { id: 10, name: "Environmental Club", time: "3:00 PM - 4:00 PM", amount: 16000, timeSlot: "15:00-16:00" },
-    { id: 15, name: "Creative Writing", time: "2:00 PM - 3:00 PM", amount: 14000, timeSlot: "14:00-15:00" },
-  ],
+interface Club {
+  id: string
+  name: string
+  day: string
+  time: string
+  timeSlot: string
+  amount: number
+  variants?: { id: string; name: string; amount: number }[]
 }
 
-// Mock data for club variants
-const clubVariants = {
-  1: [{ id: 1, name: "With Chess Set", amount: 5000 }],
-  4: [{ id: 2, name: "With Art Supplies", amount: 8000 }],
-  8: [{ id: 3, name: "With Uniform", amount: 12000 }],
-  13: [{ id: 4, name: "With Robot Kit", amount: 25000 }],
+interface Student {
+  id: string
+  name: string
+  class: string
+  section: string
+  status: "active" | "inactive"
+}
+
+interface Variant {
+  id: string
+  name: string
+  amount: number
+}
+
+interface TimeSlot {
+  startTime: string
+  endTime: string
 }
 
 export function NewEnrollmentForm() {
-  const [selectedStudent, setSelectedStudent] = useState("")
-  const [selectedClubs, setSelectedClubs] = useState<{ [key: string]: number }>({})
-  const [selectedVariants, setSelectedVariants] = useState<{ [key: string]: number[] }>({})
+  const router = useRouter()
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [selectedClubs, setSelectedClubs] = useState<{ [key: string]: string }>({})
+  const [selectedVariants, setSelectedVariants] = useState<{ [key: string]: string[] }>({})
   const [selectedTerms, setSelectedTerms] = useState<{ [key: string]: string[] }>({})
+  const [students, setStudents] = useState<Student[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
+  const [classes, setClasses] = useState<string[]>([])
+  const [sections, setSections] = useState<string[]>([])
+  const [terms, setTerms] = useState<string[]>(["1st Term", "2nd Term", "3rd Term"])
+
+  // Load data from localStorage
+  useEffect(() => {
+    // Load students (mapped students from student ID mapper)
+    const savedStudents = localStorage.getItem('admissionFormResponses')
+    if (savedStudents) {
+      const allStudents = JSON.parse(savedStudents)
+      const mappedStudents = allStudents
+        .filter((student: any) => student.status === "Admitted" && student.studentId)
+        .map((student: any) => ({
+          id: student.id,
+          name: `${student.firstName} ${student.lastName}`,
+          class: student.class || "Not Assigned",
+          section: student.section || "Not Assigned",
+          status: "active"
+        }))
+      setStudents(mappedStudents)
+    }
+
+    // Load clubs
+    const savedClubs = localStorage.getItem('clubs')
+    if (savedClubs) {
+      setClubs(JSON.parse(savedClubs))
+    }
+
+    // Load classes and sections
+    const savedClasses = localStorage.getItem('classes')
+    if (savedClasses) {
+      const classData = JSON.parse(savedClasses)
+      const classNames = classData.map((cls: any) => cls.name)
+      setClasses(classNames)
+      
+      // Extract unique sections
+      const allSections = classData.flatMap((cls: any) => 
+        cls.sections.map((sec: any) => sec.name)
+      )
+      setSections([...new Set(allSections)])
+    }
+  }, [])
+
+  // Group clubs by day for display
+  const clubsByDay = clubs.reduce((acc, club) => {
+    if (!acc[club.day]) {
+      acc[club.day] = []
+    }
+    acc[club.day].push(club)
+    return acc
+  }, {} as Record<string, Club[]>)
 
   // Group clubs by time slots for conflict detection
   const getClubsByTimeSlot = (day: string) => {
-    const clubs = clubsByDay[day as keyof typeof clubsByDay] || []
-    const grouped: { [key: string]: typeof clubs } = {}
+    const dayClubs = clubsByDay[day] || []
+    const grouped: { [key: string]: Club[] } = {}
 
-    clubs.forEach((club) => {
+    dayClubs.forEach((club) => {
       if (!grouped[club.timeSlot]) {
         grouped[club.timeSlot] = []
       }
@@ -76,17 +122,17 @@ export function NewEnrollmentForm() {
     let total = 0
 
     Object.entries(selectedClubs).forEach(([day, clubId]) => {
-      const club = clubsByDay[day as keyof typeof clubsByDay].find((c) => c.id === clubId)
+      const club = clubs.find((c) => c.id === clubId)
       if (club) {
-        const terms = selectedTerms[day] || []
-        total += club.amount * terms.length
+        const termsForClub = selectedTerms[day] || []
+        total += club.amount * termsForClub.length
 
         // Add variants
         const variants = selectedVariants[day] || []
         variants.forEach((variantId) => {
-          const variant = clubVariants[clubId]?.find((v) => v.id === variantId)
+          const variant = club.variants?.find((v) => v.id === variantId)
           if (variant) {
-            total += variant.amount * terms.length
+            total += variant.amount * termsForClub.length
           }
         })
       }
@@ -95,7 +141,7 @@ export function NewEnrollmentForm() {
     return total
   }
 
-  const handleClubSelection = (day: string, clubId: number) => {
+  const handleClubSelection = (day: string, clubId: string) => {
     setSelectedClubs((prev) => ({
       ...prev,
       [day]: clubId,
@@ -112,7 +158,7 @@ export function NewEnrollmentForm() {
     }))
   }
 
-  const handleVariantToggle = (day: string, variantId: number) => {
+  const handleVariantToggle = (day: string, variantId: string) => {
     setSelectedVariants((prev) => {
       const current = prev[day] || []
       return {
@@ -135,36 +181,82 @@ export function NewEnrollmentForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Prepare and send data to API
-    const enrollmentData = {
-      studentId: selectedStudent,
-      enrollments: Object.entries(selectedClubs).map(([day, clubId]) => ({
-        clubId,
-        terms: selectedTerms[day] || [],
-        variants: selectedVariants[day] || [],
-      })),
+    if (!selectedStudent || Object.keys(selectedClubs).length === 0) {
+      alert("Please select a student and at least one club")
+      return
     }
 
-    console.log("Enrollment data:", enrollmentData)
-    alert("Enrollment successful!")
-    // Reset form or redirect
+    // Check if all selected clubs have at least one term selected
+    const allClubsHaveTerms = Object.entries(selectedClubs).every(([day]) => {
+      return selectedTerms[day] && selectedTerms[day].length > 0
+    })
+
+    if (!allClubsHaveTerms) {
+      alert("Please select at least one term for each club")
+      return
+    }
+
+    // Create enrollment records (one per club)
+    const newEnrollments = Object.entries(selectedClubs).map(([day, clubId]) => {
+      const club = clubs.find((c) => c.id === clubId)
+      const variants = selectedVariants[day] || []
+      const variantNames = variants.map(variantId => {
+        const variant = club?.variants?.find(v => v.id === variantId)
+        return variant ? variant.name : ""
+      }).filter(Boolean)
+
+      return {
+        id: uuidv4(),
+        studentId: selectedStudent.id,
+        studentName: selectedStudent.name,
+        class: selectedStudent.class,
+        section: selectedStudent.section,
+        clubId: clubId,
+        clubName: club?.name || "",
+        terms: selectedTerms[day] || [],
+        variant: variantNames.join(", ") || "Standard",
+        amount: calculateTotal(),
+        status: "Active" as const,
+        enrollmentDate: new Date().toISOString()
+      }
+    })
+
+    // Save to localStorage
+    const savedEnrollments = localStorage.getItem('enrollments')
+    const existingEnrollments = savedEnrollments ? JSON.parse(savedEnrollments) : []
+    const updatedEnrollments = [...existingEnrollments, ...newEnrollments]
+    localStorage.setItem('enrollments', JSON.stringify(updatedEnrollments))
+
+    // Redirect to enrollments list
+    router.push('/admin/enrollments')
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="student">Select Student</Label>
-          <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+          <Label htmlFor="student">Select Student *</Label>
+          <Select 
+            value={selectedStudent?.id || ""} 
+            onValueChange={(value) => {
+              const student = students.find(s => s.id === value)
+              setSelectedStudent(student || null)
+            }}
+            required
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select a student" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">John Doe (JSS 3)</SelectItem>
-              <SelectItem value="2">Jane Smith (SSS 1)</SelectItem>
-              <SelectItem value="3">Michael Johnson (JSS 2)</SelectItem>
-              <SelectItem value="4">Sarah Williams (SSS 2)</SelectItem>
-              <SelectItem value="5">Robert Brown (JSS 1)</SelectItem>
+              {students.length > 0 ? (
+                students.map((student) => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.name} - {student.class} {student.section && `(${student.section})`}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="" disabled>No students found</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -173,9 +265,9 @@ export function NewEnrollmentForm() {
       <Separator />
 
       <div>
-        <h3 className="text-lg font-medium mb-4">Select Clubs</h3>
+        <h3 className="text-lg font-medium mb-4">Select Clubs *</h3>
 
-        {Object.entries(clubsByDay).map(([day, clubs]) => {
+        {Object.entries(clubsByDay).map(([day, dayClubs]) => {
           const clubsByTimeSlot = getClubsByTimeSlot(day)
 
           return (
@@ -205,12 +297,12 @@ export function NewEnrollmentForm() {
 
                     {/* Club Selection */}
                     <RadioGroup
-                      value={selectedClubs[day]?.toString() || ""}
-                      onValueChange={(value) => handleClubSelection(day, Number.parseInt(value))}
+                      value={selectedClubs[day] || ""}
+                      onValueChange={(value) => handleClubSelection(day, value)}
                     >
                       {timeSlotClubs.map((club) => (
                         <div key={club.id} className="flex items-start space-x-2 py-2 pl-4">
-                          <RadioGroupItem value={club.id.toString()} id={`club-${day}-${club.id}`} />
+                          <RadioGroupItem value={club.id} id={`club-${day}-${club.id}`} />
                           <div className="grid gap-1.5 flex-1">
                             <Label htmlFor={`club-${day}-${club.id}`} className="font-medium">
                               {club.name}
@@ -229,9 +321,9 @@ export function NewEnrollmentForm() {
                 {selectedClubs[day] && (
                   <div className="pl-6 pt-2 border-l-2 border-muted">
                     <div className="space-y-2 mb-4">
-                      <Label className="text-sm font-medium">Select Terms</Label>
+                      <Label className="text-sm font-medium">Select Terms *</Label>
                       <div className="flex flex-wrap gap-4">
-                        {["1st Term", "2nd Term", "3rd Term"].map((term) => (
+                        {terms.map((term) => (
                           <div key={term} className="flex items-center space-x-2">
                             <Checkbox
                               id={`term-${day}-${term}`}
@@ -247,11 +339,11 @@ export function NewEnrollmentForm() {
                     </div>
 
                     {/* Variants */}
-                    {clubVariants[selectedClubs[day]] && (
+                    {clubs.find(c => c.id === selectedClubs[day])?.variants && (
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Club Variants</Label>
                         <div className="space-y-2">
-                          {clubVariants[selectedClubs[day]].map((variant) => (
+                          {clubs.find(c => c.id === selectedClubs[day])?.variants?.map((variant) => (
                             <div key={variant.id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`variant-${day}-${variant.id}`}
@@ -290,7 +382,7 @@ export function NewEnrollmentForm() {
           <p className="text-3xl font-bold">₦{calculateTotal().toLocaleString()}</p>
         </div>
         <div className="space-x-4">
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" onClick={() => router.push('/admin/enrollments')}>
             Cancel
           </Button>
           <Button

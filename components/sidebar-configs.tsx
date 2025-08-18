@@ -99,11 +99,11 @@ export const getMenuItemsForRole = (role: string): MenuItem[] => {
       expanded: true,
       submenu: [
         { title: "Dashboard", icon: <Circle size={8} />, path: "/schoolbus/admin" },
-        { title: "Buses", icon: <Circle size={8} />, path: "/schoolbus/admin/buses" },
-        { title: "Staff", icon: <Circle size={8} />, path: "/schoolbus/admin/staff" },
         { title: "Routes & Stops", icon: <Circle size={8} />, path: "/schoolbus/admin/routes" },
         { title: "Fees", icon: <Circle size={8} />, path: "/schoolbus/admin/fees" },
+        { title: "Buses", icon: <Circle size={8} />, path: "/schoolbus/admin/buses" },
         { title: "Enrollments", icon: <Circle size={8} />, path: "/schoolbus/admin/enrollments" },
+        { title: "Staff", icon: <Circle size={8} />, path: "/schoolbus/admin/staff" },
         { title: "Bus Tracking", icon: <Circle size={8} />, path: "/schoolbus/admin/tracking" },
         { title: "Pickup & Dropoff", icon: <Circle size={8} />, path: "/schoolbus/admin/register" },
         { title: "Authorized Agents", icon: <Circle size={8} />, path: "/schoolbus/admin/agents" },

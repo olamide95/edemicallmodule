@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   DropdownMenu,
@@ -16,79 +16,140 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MoreHorizontalIcon, SearchIcon, FilterIcon, CheckIcon, XIcon, EyeIcon } from "lucide-react"
 import { StatusBadge } from "@/components/status-badge"
 
-// Mock data for club change requests
-const mockClubChanges = [
-  {
-    id: 1,
-    student: "John Doe",
-    class: "JSS 3",
-    currentClub: "Chess Club",
-    newClub: "Debate Club",
-    requestDate: "2023-11-10",
-    reason: "Schedule conflict with tutoring",
-    status: "pending",
-  },
-  {
-    id: 2,
-    student: "Jane Smith",
-    class: "SSS 1",
-    currentClub: "Debate Club",
-    newClub: "Science Club",
-    requestDate: "2023-11-08",
-    reason: "More interested in science activities",
-    status: "approved",
-  },
-  {
-    id: 3,
-    student: "Michael Johnson",
-    class: "JSS 2",
-    currentClub: "Science Club",
-    newClub: "Chess Club",
-    requestDate: "2023-11-05",
-    reason: "Wants to develop strategic thinking",
-    status: "pending",
-  },
-  {
-    id: 4,
-    student: "Sarah Williams",
-    class: "SSS 2",
-    currentClub: "Art Club",
-    newClub: "Music Club",
-    requestDate: "2023-11-03",
-    reason: "Discovered passion for music",
-    status: "rejected",
-  },
-  {
-    id: 5,
-    student: "Robert Brown",
-    class: "JSS 1",
-    currentClub: "Sports Club",
-    newClub: "Art Club",
-    requestDate: "2023-11-01",
-    reason: "Injury preventing sports participation",
-    status: "approved",
-  },
-]
+type Student = {
+  id: string
+  firstName: string
+  lastName: string
+  class: string
+  section: string
+}
+
+type Club = {
+  id: string
+  name: string
+}
+
+type ClubChangeRequest = {
+  id: string
+  studentId: string
+  currentClubId: string
+  newClubId: string
+  reason: string
+  requestDate: string
+  status: "pending" | "approved" | "rejected"
+}
 
 export function ClubChangeTable() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [clubChanges, setClubChanges] = useState(mockClubChanges)
+  const [clubChanges, setClubChanges] = useState<ClubChangeRequest[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
 
-  const filteredClubChanges = clubChanges.filter(
-    (change) =>
-      (change.student.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        change.currentClub.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        change.newClub.toLowerCase().includes(searchQuery.toLowerCase())) &&
-      (statusFilter === "all" || change.status === statusFilter),
-  )
+  // Load data from localStorage
+  useEffect(() => {
+    const loadData = () => {
+      // Load change requests
+      const savedRequests = localStorage.getItem('clubChangeRequests')
+      if (savedRequests) {
+        setClubChanges(JSON.parse(savedRequests))
+      }
 
-  const handleApprove = (id: number) => {
-    setClubChanges(clubChanges.map((change) => (change.id === id ? { ...change, status: "approved" } : change)))
+      // Load students
+      const savedStudents = localStorage.getItem('admissionFormResponses')
+      if (savedStudents) {
+        const allStudents = JSON.parse(savedStudents)
+        const mappedStudents = allStudents
+          .filter((s: any) => s.studentId)
+          .map((s: any) => ({
+            id: s.id,
+            firstName: s.firstName,
+            lastName: s.lastName,
+            class: s.class || "JSS 1",
+            section: s.section || "A"
+          }))
+        setStudents(mappedStudents)
+      }
+
+      // Load clubs
+      const savedClubs = localStorage.getItem('clubs')
+      if (savedClubs) {
+        setClubs(JSON.parse(savedClubs))
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const filteredClubChanges = clubChanges.filter((change) => {
+    const student = students.find((s) => s.id === change.studentId)
+    const currentClub = clubs.find((c) => c.id === change.currentClubId)
+    const newClub = clubs.find((c) => c.id === change.newClubId)
+
+    const studentName = student ? `${student.firstName} ${student.lastName}` : ""
+    const currentClubName = currentClub ? currentClub.name : ""
+    const newClubName = newClub ? newClub.name : ""
+
+    return (
+      studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      currentClubName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      newClubName.toLowerCase().includes(searchQuery.toLowerCase())
+    ) && (statusFilter === "all" || change.status === statusFilter)
+  })
+
+  const handleApprove = (id: string) => {
+    // Update the request status
+    const updatedChanges = clubChanges.map((change) => 
+      change.id === id ? { ...change, status: "approved" } : change
+    )
+    setClubChanges(updatedChanges)
+    localStorage.setItem('clubChangeRequests', JSON.stringify(updatedChanges))
+
+    // Update the enrollment in localStorage
+    const request = clubChanges.find((c) => c.id === id)
+    if (request) {
+      const savedEnrollments = localStorage.getItem('clubEnrollments')
+      const enrollments = savedEnrollments ? JSON.parse(savedEnrollments) : []
+
+      // Mark old enrollment as inactive
+      const updatedEnrollments = enrollments.map((e: any) => 
+        e.studentId === request.studentId && e.status === "active" 
+          ? { ...e, status: "inactive" } 
+          : e
+      )
+
+      // Add new enrollment
+      updatedEnrollments.push({
+        id: Date.now().toString(),
+        studentId: request.studentId,
+        clubId: request.newClubId,
+        status: "active",
+        date: new Date().toISOString()
+      })
+
+      localStorage.setItem('clubEnrollments', JSON.stringify(updatedEnrollments))
+    }
   }
 
-  const handleReject = (id: number) => {
-    setClubChanges(clubChanges.map((change) => (change.id === id ? { ...change, status: "rejected" } : change)))
+  const handleReject = (id: string) => {
+    const updatedChanges = clubChanges.map((change) => 
+      change.id === id ? { ...change, status: "rejected" } : change
+    )
+    setClubChanges(updatedChanges)
+    localStorage.setItem('clubChangeRequests', JSON.stringify(updatedChanges))
+  }
+
+  const getStudentDetails = (studentId: string) => {
+    const student = students.find((s) => s.id === studentId)
+    return student ? {
+      name: `${student.firstName} ${student.lastName}`,
+      class: student.class
+    } : { name: "Unknown Student", class: "Unknown" }
+  }
+
+  const getClubName = (clubId: string) => {
+    const club = clubs.find((c) => c.id === clubId)
+    return club ? club.name : "Unknown Club"
   }
 
   return (
@@ -143,51 +204,54 @@ export function ClubChangeTable() {
           </TableHeader>
           <TableBody>
             {filteredClubChanges.length > 0 ? (
-              filteredClubChanges.map((change) => (
-                <TableRow key={change.id}>
-                  <TableCell className="font-medium">{change.student}</TableCell>
-                  <TableCell>{change.class}</TableCell>
-                  <TableCell>{change.currentClub}</TableCell>
-                  <TableCell>{change.newClub}</TableCell>
-                  <TableCell>{change.requestDate}</TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={change.reason}>
-                    {change.reason}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <StatusBadge status={change.status} />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontalIcon className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <EyeIcon className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        {change.status === "pending" && (
-                          <>
-                            <DropdownMenuItem onClick={() => handleApprove(change.id)}>
-                              <CheckIcon className="mr-2 h-4 w-4 text-green-600" />
-                              Approve
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleReject(change.id)}>
-                              <XIcon className="mr-2 h-4 w-4 text-red-600" />
-                              Reject
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredClubChanges.map((change) => {
+                const student = getStudentDetails(change.studentId)
+                return (
+                  <TableRow key={change.id}>
+                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell>{student.class}</TableCell>
+                    <TableCell>{getClubName(change.currentClubId)}</TableCell>
+                    <TableCell>{getClubName(change.newClubId)}</TableCell>
+                    <TableCell>{change.requestDate}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={change.reason}>
+                      {change.reason}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <StatusBadge status={change.status} />
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontalIcon className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem>
+                            <EyeIcon className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          {change.status === "pending" && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleApprove(change.id)}>
+                                <CheckIcon className="mr-2 h-4 w-4 text-green-600" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleReject(change.id)}>
+                                <XIcon className="mr-2 h-4 w-4 text-red-600" />
+                                Reject
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center">

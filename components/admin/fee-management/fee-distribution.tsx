@@ -46,6 +46,7 @@ const MultiSelectComponent = React.memo(({ options, selected, onChange, placehol
     }
   }
 
+
   const handleSelectAll = () => {
     if (selected.length === options.length) {
       onChange([])
@@ -114,86 +115,28 @@ const MultiSelectComponent = React.memo(({ options, selected, onChange, placehol
   )
 })
 
-// Using our custom MultiSelect component instead of the imported one
 const MultiSelect = MultiSelectComponent
 
-// Mock data
-const feeTerms = [
-  { id: "1", name: "2023-2024 Academic Year", terms: ["Term 1", "Term 2", "Term 3"] },
-  { id: "2", name: "2024-2025 Academic Year", terms: ["Term 1", "Term 2", "Term 3"] },
-]
+// Local storage keys
 
-const classes = [
-  { label: "JSS 1", value: "jss1" },
-  { label: "JSS 2", value: "jss2" },
-  { label: "JSS 3", value: "jss3" },
-  { label: "SS 1", value: "ss1" },
-  { label: "SS 2", value: "ss2" },
-  { label: "SS 3", value: "ss3" },
-]
-
-const feeHeads = [
-  { label: "Tuition Fee", value: "tuition" },
-  { label: "Development Levy", value: "development" },
-  { label: "Library Fee", value: "library" },
-  { label: "Technology Fee", value: "technology" },
-  { label: "Sports Fee", value: "sports" },
-  { label: "Transportation Fee", value: "transportation" },
-  { label: "Admission Fee", value: "admission" },
-  { label: "Accommodation", value: "accommodation" },
-  { label: "Feeding", value: "feeding" },
-  { label: "Utilities", value: "utilities" },
-]
-
-// Mock data for existing fee distributions
-const existingDistributions = [
-  {
-    id: "1",
-    name: "2023-2024 Regular Fees",
-    academicYear: "2023-2024",
-    term: "All Terms",
-    classes: ["JSS 1", "JSS 2", "JSS 3"],
-    feeHeads: ["Tuition Fee", "Development Levy", "Technology Fee"],
-    status: "active",
-    lastUpdated: "2023-08-15",
-  },
-  {
-    id: "2",
-    name: "2023-2024 New Student Fees",
-    academicYear: "2023-2024",
-    term: "Term 1",
-    classes: ["JSS 1", "SS 1"],
-    feeHeads: ["Tuition Fee", "Development Levy", "Admission Fee"],
-    status: "active",
-    lastUpdated: "2023-08-10",
-  },
-  {
-    id: "3",
-    name: "2022-2023 Regular Fees",
-    academicYear: "2022-2023",
-    term: "All Terms",
-    classes: ["JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"],
-    feeHeads: ["Tuition Fee", "Development Levy", "Library Fee"],
-    status: "archived",
-    lastUpdated: "2022-07-20",
-  },
-  {
-    id: "4",
-    name: "2023-2024 Boarding Fees",
-    academicYear: "2023-2024",
-    term: "All Terms",
-    classes: ["JSS 1", "JSS 2", "JSS 3", "SS 1", "SS 2", "SS 3"],
-    feeHeads: ["Accommodation", "Feeding", "Utilities"],
-    status: "draft",
-    lastUpdated: "2023-09-01",
-  },
-]
-
+const STORAGE_KEYS = {
+  FEE_DISTRIBUTIONS: "feeDistributions",
+  FEE_DISTRIBUTION_DATA: "feeDistributionData", // New key for storing distribution items
+  CLASSES: "classes",
+  FEE_HEADS: "feeHeadsData",
+  FEE_TERMS: "feeTerms"
+}
 // Types
 interface AmountDistribution {
   termId: string
   termName: string
   amount: number
+}
+
+interface ClassFee {
+  amount: number
+  distribution: AmountDistribution[]
+  allocationMethod: "firstTerm" | "even" | "manual"
 }
 
 interface FeeDistributionItem {
@@ -202,27 +145,29 @@ interface FeeDistributionItem {
   existingStudents: {
     enabled: boolean
     classFees: {
-      [classId: string]: {
-        amount: number
-        distribution: AmountDistribution[]
-        allocationMethod: "firstTerm" | "even" | "manual"
-      }
+      [classId: string]: ClassFee
     }
   }
   newStudents: {
     enabled: boolean
     classFees: {
-      [classId: string]: {
-        amount: number
-        distribution: AmountDistribution[]
-        allocationMethod: "firstTerm" | "even" | "manual"
-      }
+      [classId: string]: ClassFee
     }
   }
 }
 
+interface FeeDistribution {
+  id: string
+  name: string
+  academicYear: string
+  term: string
+  classes: string[]
+  feeHeads: string[]
+  status: "active" | "archived" | "draft"
+  lastUpdated: string
+}
 function FeeDistributionComponent() {
-  // State
+  // State (same as before)
   const [showForm, setShowForm] = useState(false)
   const [distributionName, setDistributionName] = useState("")
   const [selectedFeeTerm, setSelectedFeeTerm] = useState<string>("")
@@ -243,26 +188,80 @@ function FeeDistributionComponent() {
   const [isViewMode, setIsViewMode] = useState(false)
   const [showDistribution, setShowDistribution] = useState(false)
   const [useUnifiedView, setUseUnifiedView] = useState(true)
-  const [distributions, setDistributions] = useState(existingDistributions)
+  const [distributions, setDistributions] = useState<FeeDistribution[]>([])
   const [editingDistributionId, setEditingDistributionId] = useState<string | null>(null)
+  const [classes, setClasses] = useState<{ label: string; value: string }[]>([])
+  const [feeHeads, setFeeHeads] = useState<{ label: string; value: string }[]>([])
+  const [feeTerms, setFeeTerms] = useState<{ id: string; name: string; terms: string[] }[]>([])
 
   // Ref for scrollable table container
   const tableContainerRef = useRef<HTMLDivElement>(null)
+
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const loadData = () => {
+      // Load distributions
+      const savedDistributions = localStorage.getItem(STORAGE_KEYS.FEE_DISTRIBUTIONS)
+      if (savedDistributions) {
+        setDistributions(JSON.parse(savedDistributions))
+      }
+
+      // Load distribution items data
+      const savedDistributionData = localStorage.getItem(STORAGE_KEYS.FEE_DISTRIBUTION_DATA)
+      if (savedDistributionData) {
+        setDistributionItems(JSON.parse(savedDistributionData))
+      }
+
+      // Load classes
+      const savedClasses = localStorage.getItem(STORAGE_KEYS.CLASSES)
+      if (savedClasses) {
+        const classesData = JSON.parse(savedClasses)
+        const classOptions = classesData.map((cls: any) => ({
+          label: cls.name,
+          value: cls.name.toLowerCase().replace(/\s+/g, '')
+        }))
+        setClasses(classOptions)
+      }
+
+
+      // Load fee heads
+     const savedFeeHeads = localStorage.getItem(STORAGE_KEYS.FEE_HEADS)
+      if (savedFeeHeads) {
+        const feeHeadsData = JSON.parse(savedFeeHeads)
+        const feeHeadOptions = feeHeadsData.map((head: any) => ({
+          label: head.name,
+          value: head.name.toLowerCase().replace(/\s+/g, '')
+        }))
+        setFeeHeads(feeHeadOptions)
+      }
+
+      // Load fee terms
+      const savedFeeTerms = localStorage.getItem(STORAGE_KEYS.FEE_TERMS)
+      if (savedFeeTerms) {
+        const feeTermsData = JSON.parse(savedFeeTerms)
+        const feeTermOptions = feeTermsData.map((term: any) => ({
+          id: term.id.toString(),
+          name: term.name,
+          terms: term.terms.map((t: any) => t.name)
+        }))
+        setFeeTerms(feeTermOptions)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Save distributions to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.FEE_DISTRIBUTIONS, JSON.stringify(distributions))
+    localStorage.setItem(STORAGE_KEYS.FEE_DISTRIBUTION_DATA, JSON.stringify(distributionItems))
+  }, [distributions, distributionItems])
 
   // Memoize filtered distributions
   const filteredDistributions = useMemo(() => {
     return distributions
   }, [distributions])
-
-  // Add useCallback for handlers
-  const handleAddFeeHead = useCallback(
-    () => {
-      // Implementation
-    },
-    [
-      /* dependencies */
-    ],
-  )
 
   const validateDistributions = useCallback(() => {
     const errors: { [key: string]: string } = {}
@@ -301,7 +300,6 @@ function FeeDistributionComponent() {
 
   // Initialize distribution items when selections change
   useEffect(() => {
-    // Make sure all required selections are made and are arrays
     if (
       selectedFeeTerm &&
       Array.isArray(selectedClasses) &&
@@ -309,12 +307,6 @@ function FeeDistributionComponent() {
       Array.isArray(selectedFeeHeads) &&
       selectedFeeHeads.length > 0
     ) {
-      console.log("Generating distribution items with:", {
-        term: selectedFeeTerm,
-        classes: selectedClasses,
-        feeHeads: selectedFeeHeads,
-      })
-
       const terms = getTerms()
 
       const newDistributionItems = selectedFeeHeads.map((feeHeadId) => {
@@ -339,11 +331,11 @@ function FeeDistributionComponent() {
           feeHeadId,
           feeHeadName: feeHead?.label || "",
           existingStudents: {
-            enabled: true, // Default based on settings
+            enabled: true,
             classFees: { ...classFees },
           },
           newStudents: {
-            enabled: true, // Default based on settings
+            enabled: true,
             classFees: { ...classFees },
           },
         }
@@ -355,7 +347,7 @@ function FeeDistributionComponent() {
     } else {
       setShowDistribution(false)
     }
-  }, [selectedFeeTerm, selectedClasses, selectedFeeHeads])
+  }, [selectedFeeTerm, selectedClasses, selectedFeeHeads, feeHeads, feeTerms])
 
   // Optimize handleAmountChange with useCallback
   const handleAmountChange = useCallback(
@@ -367,7 +359,6 @@ function FeeDistributionComponent() {
           if (item.feeHeadId === feeHeadId) {
             const studentTypeData = studentType === "existing" ? { ...item.existingStudents } : { ...item.newStudents }
 
-            // Make sure classFees exists and has the classId
             if (!studentTypeData.classFees) {
               studentTypeData.classFees = {}
             }
@@ -404,7 +395,6 @@ function FeeDistributionComponent() {
                 amount: evenAmount,
               }))
             }
-            // For manual, we don't auto-update, but we'll validate later
 
             studentTypeData.classFees[classId] = classFee
 
@@ -453,7 +443,6 @@ function FeeDistributionComponent() {
 
     const studentTypeData = studentType === "existing" ? item.existingStudents : item.newStudents
 
-    // Make sure classFees exists and has the classId
     if (!studentTypeData.classFees || !studentTypeData.classFees[classId]) {
       console.error("Class fees not found for", feeHeadId, classId, studentType)
       return
@@ -528,7 +517,6 @@ function FeeDistributionComponent() {
         if (item.feeHeadId === feeHeadId) {
           const studentTypeData = studentType === "existing" ? { ...item.existingStudents } : { ...item.newStudents }
 
-          // Make sure classFees exists and has the classId
           if (!studentTypeData.classFees) {
             studentTypeData.classFees = {}
           }
@@ -587,10 +575,9 @@ function FeeDistributionComponent() {
 
     // Validate total matches
     const totalDistributed = currentEditItem.distribution.reduce((sum, term) => sum + term.amount, 0)
-    const isValid = Math.abs(totalDistributed - currentEditItem.amount) < 0.01 // Allow for small floating point differences
+    const isValid = Math.abs(totalDistributed - currentEditItem.amount) < 0.01
 
     if (!isValid) {
-      // Show validation error in dialog
       return
     }
 
@@ -600,7 +587,6 @@ function FeeDistributionComponent() {
           const studentTypeData =
             currentEditItem.studentType === "existing" ? { ...item.existingStudents } : { ...item.newStudents }
 
-          // Ensure classFees exists
           if (!studentTypeData.classFees) {
             studentTypeData.classFees = {}
           }
@@ -626,7 +612,7 @@ function FeeDistributionComponent() {
   }
 
   // Save as draft
-  const saveDraft = () => {
+ const saveDraft = () => {
     if (!distributionName) {
       alert("Please enter a distribution name")
       return
@@ -635,7 +621,6 @@ function FeeDistributionComponent() {
     if (validateDistributions()) {
       setDistributionStatus("draft")
 
-      // Create a new distribution entry
       const selectedTerm = feeTerms.find((term) => term.id === selectedFeeTerm)
       const termText = selectedTerm ? selectedTerm.name : ""
 
@@ -661,20 +646,17 @@ function FeeDistributionComponent() {
       }
 
       if (editingDistributionId) {
-        // Update existing distribution
         setDistributions((prev) => prev.map((dist) => (dist.id === editingDistributionId ? newDistribution : dist)))
       } else {
-        // Add new distribution
         setDistributions((prev) => [...prev, newDistribution])
       }
 
-      // Reset form and go back to list view
       resetForm()
     }
   }
 
   // Submit distribution
-  const submitDistribution = () => {
+ const submitDistribution = () => {
     if (!distributionName) {
       alert("Please enter a distribution name")
       return
@@ -683,7 +665,6 @@ function FeeDistributionComponent() {
     if (validateDistributions()) {
       setDistributionStatus("submitted")
 
-      // Create a new distribution entry
       const selectedTerm = feeTerms.find((term) => term.id === selectedFeeTerm)
       const termText = selectedTerm ? selectedTerm.name : ""
 
@@ -709,14 +690,11 @@ function FeeDistributionComponent() {
       }
 
       if (editingDistributionId) {
-        // Update existing distribution
         setDistributions((prev) => prev.map((dist) => (dist.id === editingDistributionId ? newDistribution : dist)))
       } else {
-        // Add new distribution
         setDistributions((prev) => [...prev, newDistribution])
       }
 
-      // Reset form and go back to list view
       resetForm()
     }
   }
@@ -736,7 +714,7 @@ function FeeDistributionComponent() {
     return classes.find((c) => c.value === classId)?.label || classId
   }
 
-  // Add a new function to toggle between view modes
+  // Toggle between view modes
   const toggleViewMode = (checked: boolean) => {
     setUseUnifiedView(checked)
   }
@@ -744,7 +722,7 @@ function FeeDistributionComponent() {
   // Scroll table horizontally
   const scrollTable = (direction: "left" | "right") => {
     if (tableContainerRef.current) {
-      const scrollAmount = 200 // Adjust scroll amount as needed
+      const scrollAmount = 200
       const currentScroll = tableContainerRef.current.scrollLeft
       tableContainerRef.current.scrollTo({
         left: direction === "left" ? currentScroll - scrollAmount : currentScroll + scrollAmount,
@@ -768,7 +746,7 @@ function FeeDistributionComponent() {
   }
 
   // Edit distribution
-  const editDistribution = (id: string) => {
+ const editDistribution = (id: string) => {
     const distribution = distributions.find((dist) => dist.id === id)
     if (!distribution) return
 
@@ -798,6 +776,17 @@ function FeeDistributionComponent() {
       })
       .filter(Boolean)
     setSelectedFeeHeads(feeHeadValues)
+
+    // Load the distribution items for this distribution
+    const savedDistributionData = localStorage.getItem(STORAGE_KEYS.FEE_DISTRIBUTION_DATA)
+    if (savedDistributionData) {
+      const allDistributionItems = JSON.parse(savedDistributionData)
+      // Filter items for this distribution (you might need to adjust this logic based on your data structure)
+      const itemsForThisDistribution = allDistributionItems.filter((item: FeeDistributionItem) => 
+        feeHeadValues.includes(item.feeHeadId)
+      )
+      setDistributionItems(itemsForThisDistribution)
+    }
 
     setShowForm(true)
   }
@@ -1051,7 +1040,8 @@ function FeeDistributionComponent() {
                                 {selectedClasses.map((classId) => {
                                   const classFee = item.existingStudents.classFees[classId]
                                   return (
-                                    <TableCell key={`existing-${item.feeHeadId}-${classId}`} className="p-2">
+                                    <TableCell key={`existing-${item.feeHeadId}-${classId}`} 
+                                    className="p-2">
                                       {item.existingStudents.enabled ? (
                                         <div className="flex items-center space-x-2">
                                           <Input
@@ -1480,5 +1470,4 @@ function FeeDistributionComponent() {
   )
 }
 
-// Export the component with the correct name
 export { FeeDistributionComponent as FeeDistribution }

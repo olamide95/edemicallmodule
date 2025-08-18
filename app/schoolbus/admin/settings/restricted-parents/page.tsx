@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,70 +19,117 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/use-toast"
 
-// Mock data for restricted parents
-const restrictedParents = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    phone: "+234 123 456 7890",
-    children: ["Alice Smith", "Bob Smith"],
-    reason: "Payment issues",
-    date: "2023-09-01",
-    status: "restricted",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    phone: "+234 234 567 8901",
-    children: ["Charlie Johnson"],
-    reason: "Behavioral issues",
-    date: "2023-08-15",
-    status: "restricted",
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    phone: "+234 345 678 9012",
-    children: ["Diana Brown", "Edward Brown"],
-    reason: "Late payments",
-    date: "2023-07-20",
-    status: "enabled",
-  },
-]
+interface Parent {
+  id: string
+  name: string
+  email: string
+  phone: string
+  students: string[]
+  status: "restricted" | "enabled"
+  reason?: string
+  date?: string
+}
+
+interface Student {
+  id: string
+  name: string
+  class: string
+  section: string
+}
 
 export default function RestrictedParentsPage() {
+  const router = useRouter()
   const [isRestrictDialogOpen, setIsRestrictDialogOpen] = useState(false)
   const [isEnableDialogOpen, setIsEnableDialogOpen] = useState(false)
-  const [selectedParent, setSelectedParent] = useState<string | null>(null)
+  const [selectedParent, setSelectedParent] = useState<Parent | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterClass, setFilterClass] = useState("")
   const [filterSection, setFilterSection] = useState("")
+  const [parents, setParents] = useState<Parent[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [isMounted, setIsMounted] = useState(false)
 
-  const filteredParents = restrictedParents.filter(
+  // Load data from localStorage
+  useEffect(() => {
+    const savedParents = JSON.parse(localStorage.getItem('restrictedParents') || []
+    const onboardingParents = JSON.parse(localStorage.getItem('parents') || []
+    const onboardingStudents = JSON.parse(localStorage.getItem('students') || []
+    
+    // Merge onboarding parents with restricted parents data
+    const mergedParents = onboardingParents.map((parent: any) => {
+      const restrictedParent = savedParents.find((p: Parent) => p.id === parent.id)
+      return {
+        id: parent.id,
+        name: parent.name,
+        email: parent.email,
+        phone: parent.phone,
+        students: parent.students || [],
+        status: restrictedParent?.status || "enabled",
+        reason: restrictedParent?.reason,
+        date: restrictedParent?.date
+      }
+    })
+    
+    setParents(mergedParents)
+    setStudents(onboardingStudents)
+    setIsMounted(true)
+  }, [])
+
+  // Save to localStorage when parents change
+  useEffect(() => {
+    if (isMounted) {
+      const restrictedParents = parents.filter(p => p.status === "restricted")
+      localStorage.setItem('restrictedParents', JSON.stringify(restrictedParents))
+    }
+  }, [parents, isMounted])
+
+  const filteredParents = parents.filter(
     (parent) =>
       parent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       parent.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      parent.children.some((child) => child.toLowerCase().includes(searchQuery.toLowerCase())),
+      parent.students.some(studentId => {
+        const student = students.find(s => s.id === studentId)
+        return student?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      })
   )
 
-  const handleRestrictParent = () => {
+  const getStudentNames = (studentIds: string[]) => {
+    return studentIds.map(id => {
+      const student = students.find(s => s.id === id)
+      return student?.name || "Unknown Student"
+    })
+  }
+
+  const handleRestrictParent = (parentId: string, reason: string) => {
+    setParents(prev => prev.map(p => 
+      p.id === parentId 
+        ? { ...p, status: "restricted", reason, date: new Date().toISOString().split('T')[0] }
+        : p
+    ))
+    toast({
+      title: "Success",
+      description: "Parent has been restricted",
+    })
     setIsRestrictDialogOpen(false)
-    // Logic to restrict parent would go here
   }
 
-  const handleEnableParent = (id: string) => {
-    setSelectedParent(id)
-    setIsEnableDialogOpen(true)
-  }
-
-  const confirmEnableParent = () => {
+  const handleEnableParent = (parentId: string) => {
+    setParents(prev => prev.map(p => 
+      p.id === parentId 
+        ? { ...p, status: "enabled", reason: undefined, date: undefined }
+        : p
+    ))
+    toast({
+      title: "Success",
+      description: "Parent has been enabled",
+    })
     setIsEnableDialogOpen(false)
-    // Logic to enable parent would go here
   }
+
+  if (!isMounted) return null
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,14 +157,9 @@ export default function RestrictedParentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                <SelectItem value="nursery1">Nursery 1</SelectItem>
-                <SelectItem value="nursery2">Nursery 2</SelectItem>
-                <SelectItem value="primary1">Primary 1</SelectItem>
-                <SelectItem value="primary2">Primary 2</SelectItem>
-                <SelectItem value="primary3">Primary 3</SelectItem>
-                <SelectItem value="primary4">Primary 4</SelectItem>
-                <SelectItem value="primary5">Primary 5</SelectItem>
-                <SelectItem value="primary6">Primary 6</SelectItem>
+                {[...new Set(students.map(s => s.class))].map((cls, i) => (
+                  <SelectItem key={i} value={cls}>{cls}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={filterSection} onValueChange={setFilterSection}>
@@ -126,9 +168,9 @@ export default function RestrictedParentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sections</SelectItem>
-                <SelectItem value="a">Section A</SelectItem>
-                <SelectItem value="b">Section B</SelectItem>
-                <SelectItem value="c">Section C</SelectItem>
+                {[...new Set(students.map(s => s.section))].map((section, i) => (
+                  <SelectItem key={i} value={section}>{section}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -148,18 +190,53 @@ export default function RestrictedParentsPage() {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="parent-search">Search Parent</Label>
-                <Input id="parent-search" placeholder="Enter parent name or email" />
+                <Select onValueChange={(value) => setSelectedParent(parents.find(p => p.id === value) || null)}>
+                  <SelectTrigger id="parent-search">
+                    <SelectValue placeholder="Select parent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parents.filter(p => p.status !== "restricted").map(parent => (
+                      <SelectItem key={parent.id} value={parent.id}>
+                        {parent.name} ({parent.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              {selectedParent && (
+                <div className="space-y-2">
+                  <Label>Children</Label>
+                  <div className="flex flex-col gap-1">
+                    {getStudentNames(selectedParent.students).map((child, i) => (
+                      <span key={i} className="text-sm">
+                        {child}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="restriction-reason">Reason for Restriction</Label>
-                <Textarea id="restriction-reason" placeholder="Enter reason for restricting this parent" rows={3} />
+                <Textarea 
+                  id="restriction-reason" 
+                  placeholder="Enter reason for restricting this parent" 
+                  rows={3} 
+                />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsRestrictDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleRestrictParent}>
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  if (!selectedParent) return
+                  const reason = (document.getElementById('restriction-reason') as HTMLTextAreaElement)?.value || ""
+                  handleRestrictParent(selectedParent.id, reason)
+                }}
+                disabled={!selectedParent}
+              >
                 Restrict Parent
               </Button>
             </DialogFooter>
@@ -187,22 +264,24 @@ export default function RestrictedParentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredParents.map((parent) => (
+              {filteredParents
+                .filter(parent => parent.status === "restricted" || searchQuery)
+                .map((parent) => (
                 <TableRow key={parent.id}>
                   <TableCell className="font-medium">{parent.name}</TableCell>
                   <TableCell>{parent.email}</TableCell>
                   <TableCell>{parent.phone}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      {parent.children.map((child, index) => (
+                      {getStudentNames(parent.students).map((child, index) => (
                         <span key={index} className="text-sm">
                           {child}
                         </span>
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell>{parent.reason}</TableCell>
-                  <TableCell>{parent.date}</TableCell>
+                  <TableCell>{parent.reason || "-"}</TableCell>
+                  <TableCell>{parent.date || "-"}</TableCell>
                   <TableCell>
                     <Badge variant={parent.status === "restricted" ? "destructive" : "default"}>
                       {parent.status === "restricted" ? "Restricted" : "Enabled"}
@@ -210,12 +289,26 @@ export default function RestrictedParentsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     {parent.status === "restricted" ? (
-                      <Button variant="ghost" size="sm" onClick={() => handleEnableParent(parent.id)}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedParent(parent)
+                          setIsEnableDialogOpen(true)
+                        }}
+                      >
                         <UserCheck className="mr-2 h-4 w-4" />
                         Enable
                       </Button>
                     ) : (
-                      <Button variant="ghost" size="sm" onClick={() => handleEnableParent(parent.id)}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedParent(parent)
+                          setIsRestrictDialogOpen(true)
+                        }}
+                      >
                         <UserX className="mr-2 h-4 w-4" />
                         Restrict
                       </Button>
@@ -232,13 +325,18 @@ export default function RestrictedParentsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enable Parent</DialogTitle>
-            <DialogDescription>Are you sure you want to enable this parent to enroll in bus service?</DialogDescription>
+            <DialogDescription>
+              Are you sure you want to enable {selectedParent?.name} to enroll in bus service?
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEnableDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={confirmEnableParent}>
+            <Button onClick={() => {
+              if (!selectedParent) return
+              handleEnableParent(selectedParent.id)
+            }}>
               <UserCheck className="mr-2 h-4 w-4" />
               Confirm Enable
             </Button>

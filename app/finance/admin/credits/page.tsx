@@ -8,7 +8,7 @@ import Image from "next/image"
 import { useTheme } from "@/components/theme-provider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CreditList } from "@/components/admin/credits/credit-list"
-import { RefundList } from "@/components/admin/credits/refund-list"
+import { RefundList } from "@/components/admin/credits/credit-list"
 
 export default function CreditsPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)

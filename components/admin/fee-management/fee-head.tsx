@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,75 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Edit, Eye, MoreHorizontal, Plus, Trash } from "lucide-react"
 
-// Mock data for fee heads
-const mockFeeHeads = [
-  {
-    id: 1,
-    name: "Tuition Fee",
-    description: "Regular monthly tuition fee",
-    amount: 5000,
-    frequency: "Monthly",
-    defaultBank: "gtb",
-    generalLedger: "FEE-INCOME-001",
-    isOptional: false,
-    isActive: true,
-  },
-  {
-    id: 2,
-    name: "Library Fee",
-    description: "Access to library resources",
-    amount: 1000,
-    frequency: "Term",
-    defaultBank: "access",
-    generalLedger: "FEE-INCOME-002",
-    isOptional: false,
-    isActive: true,
-  },
-  {
-    id: 3,
-    name: "Sports Fee",
-    description: "For sports equipment and activities",
-    amount: 1500,
-    frequency: "Term",
-    defaultBank: "",
-    generalLedger: "FEE-INCOME-003",
-    isOptional: true,
-    isActive: true,
-  },
-  {
-    id: 4,
-    name: "Computer Lab Fee",
-    description: "Access to computer lab and resources",
-    amount: 2000,
-    frequency: "Term",
-    defaultBank: "",
-    generalLedger: "FEE-INCOME-004",
-    isOptional: false,
-    isActive: true,
-  },
-  {
-    id: 5,
-    name: "Science Lab Fee",
-    description: "For science lab equipment and materials",
-    amount: 1800,
-    frequency: "Term",
-    defaultBank: "",
-    generalLedger: "FEE-INCOME-005",
-    isOptional: false,
-    isActive: true,
-  },
-  {
-    id: 6,
-    name: "Art Supplies",
-    description: "Art materials and supplies",
-    amount: 1200,
-    frequency: "Term",
-    defaultBank: "",
-    generalLedger: "FEE-INCOME-006",
-    isOptional: true,
-    isActive: false,
-  },
-]
+// Local storage key
+const LOCAL_STORAGE_KEY = "feeHeadsData"
 
 const getBankName = (bankCode: string) => {
   const banks = {
@@ -102,7 +35,15 @@ const getBankName = (bankCode: string) => {
 }
 
 export function FeeHead() {
-  const [feeHeads, setFeeHeads] = useState(mockFeeHeads)
+  // Load data from localStorage on initial render
+  const [feeHeads, setFeeHeads] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem(LOCAL_STORAGE_KEY)
+      return savedData ? JSON.parse(savedData) : []
+    }
+    return []
+  })
+
   const [newFeeHead, setNewFeeHead] = useState({
     name: "",
     description: "",
@@ -113,25 +54,32 @@ export function FeeHead() {
     isOptional: false,
     isActive: true,
   })
+  
   const [editingFeeHead, setEditingFeeHead] = useState<null | typeof newFeeHead>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingFeeTerm, setEditingFeeTerm] = useState<null | typeof newFeeHead>(null)
   const [selectedTab, setSelectedTab] = useState("all")
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
 
-  // Optimize FeeHead component with memoization and performance improvements
+  // Save to localStorage whenever feeHeads changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(feeHeads))
+    }
+  }, [feeHeads])
 
-  // 1. Add useMemo for filtered fee heads
+  // Filtered fee heads memoized
   const filteredFeeHeads = useMemo(() => {
     if (selectedTab === "all") return feeHeads
     return feeHeads.filter((feeHead) => (selectedTab === "active" ? feeHead.isActive : !feeHead.isActive))
   }, [feeHeads, selectedTab])
 
-  // 3. Add useCallback for handlers to prevent unnecessary re-renders
+  // Handlers with localStorage integration
   const handleAddFeeHead = useCallback(() => {
-    setFeeHeads([...feeHeads, { ...newFeeHead, id: feeHeads.length + 1 }])
+    const newId = feeHeads.length > 0 ? Math.max(...feeHeads.map(f => f.id)) + 1 : 1
+    const updatedFeeHeads = [...feeHeads, { ...newFeeHead, id: newId }]
+    setFeeHeads(updatedFeeHeads)
     setNewFeeHead({
       name: "",
       description: "",
@@ -147,10 +95,11 @@ export function FeeHead() {
 
   const handleEditFeeHead = useCallback(() => {
     if (editingId !== null && editingFeeHead !== null) {
-      setFeeHeads(
-        feeHeads.map((feeHead) => (feeHead.id === editingId ? { ...editingFeeHead, id: editingId } : feeHead)),
+      const updatedFeeHeads = feeHeads.map((feeHead) => 
+        feeHead.id === editingId ? { ...editingFeeHead, id: editingId } : feeHead
       )
-      setEditingFeeTerm(null)
+      setFeeHeads(updatedFeeHeads)
+      setEditingFeeHead(null)
       setEditingId(null)
       setIsEditDialogOpen(false)
     }
@@ -163,17 +112,21 @@ export function FeeHead() {
   }, [])
 
   const handleViewFeeHead = useCallback((feeHead: any) => {
-    // Set the viewing fee head and open a view dialog
     setEditingFeeHead({ ...feeHead })
     setIsViewDialogOpen(true)
   }, [])
 
-  const handleDeleteFeeHead = useCallback(
-    (id: number) => {
-      setFeeHeads(feeHeads.filter((feeHead) => feeHead.id !== id))
-    },
-    [feeHeads],
-  )
+  const handleDeleteFeeHead = useCallback((id: number) => {
+    const updatedFeeHeads = feeHeads.filter((feeHead) => feeHead.id !== id)
+    setFeeHeads(updatedFeeHeads)
+  }, [feeHeads])
+
+  // Clear all data
+  const handleClearAll = useCallback(() => {
+    if (confirm("Are you sure you want to clear all fee heads? This cannot be undone.")) {
+      setFeeHeads([])
+    }
+  }, [])
 
   return (
     <Card>
@@ -182,10 +135,15 @@ export function FeeHead() {
           <CardTitle>Fee Heads</CardTitle>
           <CardDescription>Manage fee categories and their configurations</CardDescription>
         </div>
-        <Button className="ml-auto" onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Fee Head
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleClearAll}>
+            Clear All
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Fee Head
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="all" onValueChange={setSelectedTab}>
@@ -210,52 +168,60 @@ export function FeeHead() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFeeHeads.map((feeHead) => (
-                    <TableRow key={feeHead.id}>
-                      <TableCell className="font-medium">{feeHead.name}</TableCell>
-                      <TableCell>{feeHead.description}</TableCell>
-                      <TableCell>₦{feeHead.amount.toLocaleString()}</TableCell>
-                      <TableCell>{feeHead.frequency}</TableCell>
-                      <TableCell>{feeHead.defaultBank ? getBankName(feeHead.defaultBank) : "Not set"}</TableCell>
-                      <TableCell>{feeHead.generalLedger || "Not assigned"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {feeHead.isActive ? (
-                            <Badge className="bg-[#56CA00] bg-opacity-[0.16] text-[#56CA00]">Active</Badge>
-                          ) : (
-                            <Badge className="bg-[#8A8D93] bg-opacity-[0.16] text-[#8A8D93]">Inactive</Badge>
-                          )}
-                          {feeHead.isOptional && (
-                            <Badge className="bg-[#16B1FF] bg-opacity-[0.16] text-[#16B1FF]">Optional</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewFeeHead(feeHead)}>
-                              <Eye className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => startEdit(feeHead)}>
-                              <Edit className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteFeeHead(feeHead.id)}>
-                              <Trash className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {filteredFeeHeads.length > 0 ? (
+                    filteredFeeHeads.map((feeHead) => (
+                      <TableRow key={feeHead.id}>
+                        <TableCell className="font-medium">{feeHead.name}</TableCell>
+                        <TableCell>{feeHead.description}</TableCell>
+                        <TableCell>₦{feeHead.amount.toLocaleString()}</TableCell>
+                        <TableCell>{feeHead.frequency}</TableCell>
+                        <TableCell>{feeHead.defaultBank ? getBankName(feeHead.defaultBank) : "Not set"}</TableCell>
+                        <TableCell>{feeHead.generalLedger || "Not assigned"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {feeHead.isActive ? (
+                              <Badge className="bg-[#56CA00] bg-opacity-[0.16] text-[#56CA00]">Active</Badge>
+                            ) : (
+                              <Badge className="bg-[#8A8D93] bg-opacity-[0.16] text-[#8A8D93]">Inactive</Badge>
+                            )}
+                            {feeHead.isOptional && (
+                              <Badge className="bg-[#16B1FF] bg-opacity-[0.16] text-[#16B1FF]">Optional</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewFeeHead(feeHead)}>
+                                <Eye className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => startEdit(feeHead)}>
+                                <Edit className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteFeeHead(feeHead.id)}>
+                                <Trash className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No fee heads found. Add your first fee head to get started.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -276,48 +242,56 @@ export function FeeHead() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFeeHeads.map((feeHead) => (
-                    <TableRow key={feeHead.id}>
-                      <TableCell className="font-medium">{feeHead.name}</TableCell>
-                      <TableCell>{feeHead.description}</TableCell>
-                      <TableCell>₦{feeHead.amount.toLocaleString()}</TableCell>
-                      <TableCell>{feeHead.frequency}</TableCell>
-                      <TableCell>{feeHead.defaultBank ? getBankName(feeHead.defaultBank) : "Not set"}</TableCell>
-                      <TableCell>{feeHead.generalLedger || "Not assigned"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-[#56CA00] bg-opacity-[0.16] text-[#56CA00]">Active</Badge>
-                          {feeHead.isOptional && (
-                            <Badge className="bg-[#16B1FF] bg-opacity-[0.16] text-[#16B1FF]">Optional</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewFeeHead(feeHead)}>
-                              <Eye className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => startEdit(feeHead)}>
-                              <Edit className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteFeeHead(feeHead.id)}>
-                              <Trash className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {filteredFeeHeads.length > 0 ? (
+                    filteredFeeHeads.map((feeHead) => (
+                      <TableRow key={feeHead.id}>
+                        <TableCell className="font-medium">{feeHead.name}</TableCell>
+                        <TableCell>{feeHead.description}</TableCell>
+                        <TableCell>₦{feeHead.amount.toLocaleString()}</TableCell>
+                        <TableCell>{feeHead.frequency}</TableCell>
+                        <TableCell>{feeHead.defaultBank ? getBankName(feeHead.defaultBank) : "Not set"}</TableCell>
+                        <TableCell>{feeHead.generalLedger || "Not assigned"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-[#56CA00] bg-opacity-[0.16] text-[#56CA00]">Active</Badge>
+                            {feeHead.isOptional && (
+                              <Badge className="bg-[#16B1FF] bg-opacity-[0.16] text-[#16B1FF]">Optional</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewFeeHead(feeHead)}>
+                                <Eye className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => startEdit(feeHead)}>
+                                <Edit className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteFeeHead(feeHead.id)}>
+                                <Trash className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No active fee heads found.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -338,48 +312,56 @@ export function FeeHead() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFeeHeads.map((feeHead) => (
-                    <TableRow key={feeHead.id}>
-                      <TableCell className="font-medium">{feeHead.name}</TableCell>
-                      <TableCell>{feeHead.description}</TableCell>
-                      <TableCell>₦{feeHead.amount.toLocaleString()}</TableCell>
-                      <TableCell>{feeHead.frequency}</TableCell>
-                      <TableCell>{feeHead.defaultBank ? getBankName(feeHead.defaultBank) : "Not set"}</TableCell>
-                      <TableCell>{feeHead.generalLedger || "Not assigned"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-[#8A8D93] bg-opacity-[0.16] text-[#8A8D93]">Inactive</Badge>
-                          {feeHead.isOptional && (
-                            <Badge className="bg-[#16B1FF] bg-opacity-[0.16] text-[#16B1FF]">Optional</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewFeeHead(feeHead)}>
-                              <Eye className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => startEdit(feeHead)}>
-                              <Edit className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteFeeHead(feeHead.id)}>
-                              <Trash className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {filteredFeeHeads.length > 0 ? (
+                    filteredFeeHeads.map((feeHead) => (
+                      <TableRow key={feeHead.id}>
+                        <TableCell className="font-medium">{feeHead.name}</TableCell>
+                        <TableCell>{feeHead.description}</TableCell>
+                        <TableCell>₦{feeHead.amount.toLocaleString()}</TableCell>
+                        <TableCell>{feeHead.frequency}</TableCell>
+                        <TableCell>{feeHead.defaultBank ? getBankName(feeHead.defaultBank) : "Not set"}</TableCell>
+                        <TableCell>{feeHead.generalLedger || "Not assigned"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-[#8A8D93] bg-opacity-[0.16] text-[#8A8D93]">Inactive</Badge>
+                            {feeHead.isOptional && (
+                              <Badge className="bg-[#16B1FF] bg-opacity-[0.16] text-[#16B1FF]">Optional</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewFeeHead(feeHead)}>
+                                <Eye className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => startEdit(feeHead)}>
+                                <Edit className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteFeeHead(feeHead.id)}>
+                                <Trash className="mr-2 h-4 w-4 text-[#2E263D] dark:text-[#E7E3FC] dark:text-opacity-70 text-opacity-90" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No inactive fee heads found.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </div>
