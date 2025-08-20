@@ -17,15 +17,15 @@ export async function sendEmail({
 }) {
   try {
     const mailjet = Mailjet.apiConnect(
-      process.env.MAILJET_API_KEY!,
-      process.env.MAILJET_API_SECRET!
+     "a0b2d850755d95f1acd743e3b189a8ca", 
+      "f9b639759cb4f03ef0547222d37d05da"
     );
 
     const emailRequest = mailjet.post('send', { version: 'v3.1' }).request({
       Messages: [
         {
           From: {
-            Email: process.env.EMAIL_FROM,
+            Email: "bayangidaapp@gmail.com",
             Name: 'edemics School',
           },
           To: [
