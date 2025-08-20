@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Mail, Paperclip, Plus } from "lucide-react"
+import { Mail, Paperclip, Plus, Trash2 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 type WorkflowItem = {
@@ -28,6 +28,8 @@ type WorkflowItem = {
   attachments: string[]
   docType: string
   fieldTags: string[]
+  isCustom?: boolean
+  parentWorkflow?: string
 }
 
 const docTypes = [
@@ -36,6 +38,7 @@ const docTypes = [
   { id: "admission_letter", name: "Admission Letter" },
   { id: "payment", name: "Payment" },
   { id: "welcome", name: "Welcome" },
+  { id: "custom", name: "Custom" },
 ]
 
 const fieldTagsByDocType: Record<string, string[]> = {
@@ -44,6 +47,7 @@ const fieldTagsByDocType: Record<string, string[]> = {
   admission_letter: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Fee_Amount"],
   payment: ["Parent_Name", "Student_Name", "Payment_Deadline", "Fee_Amount"],
   welcome: ["Parent_Name", "Student_Name", "Class_Name", "Academic_Year", "Orientation_Date"],
+  custom: ["Parent_Name", "Student_Name", "Custom_Field"],
 }
 
 export function SchoolWorkflow() {
@@ -55,6 +59,9 @@ export function SchoolWorkflow() {
   const [availableFieldTags, setAvailableFieldTags] = useState<string[]>([])
   const [attachments, setAttachments] = useState<string[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [newWorkflowTitle, setNewWorkflowTitle] = useState("")
+  const [newWorkflowStatus, setNewWorkflowStatus] = useState("")
 
   // Load workflow from local storage
   useEffect(() => {
@@ -133,6 +140,61 @@ export function SchoolWorkflow() {
     setIsDialogOpen(true)
   }
 
+  const handleAddWorkflow = () => {
+    if (!newWorkflowTitle || !newWorkflowStatus) return
+
+    const newWorkflowItem: WorkflowItem = {
+      id: workflow.length > 0 ? Math.max(...workflow.map(w => w.id)) + 1 : 1,
+      title: newWorkflowTitle,
+      status: newWorkflowStatus,
+      emailTitle: `Notification for ${newWorkflowTitle}`,
+      emailContent: `Dear [Parent_Name],\n\nThis is a notification regarding ${newWorkflowTitle} for [Student_Name].\n\nBest regards,\nAdmissions Team`,
+      attachments: [],
+      docType: "custom",
+      fieldTags: ["Parent_Name", "Student_Name"],
+      isCustom: true,
+      parentWorkflow: "In Review"
+    }
+
+    const updatedWorkflow = [...workflow, newWorkflowItem]
+    setWorkflow(updatedWorkflow)
+    
+    // Save to local storage
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        admissionSettings: {
+          ...data.admissionSettings,
+          workflow: updatedWorkflow
+        }
+      }))
+    }
+
+    setNewWorkflowTitle("")
+    setNewWorkflowStatus("")
+    setIsAddDialogOpen(false)
+  }
+
+  const handleDeleteWorkflow = (id: number) => {
+    const updatedWorkflow = workflow.filter(item => item.id !== id)
+    setWorkflow(updatedWorkflow)
+    
+    // Save to local storage
+    const savedData = localStorage.getItem('onboardingData')
+    if (savedData) {
+      const data = JSON.parse(savedData)
+      localStorage.setItem('onboardingData', JSON.stringify({
+        ...data,
+        admissionSettings: {
+          ...data.admissionSettings,
+          workflow: updatedWorkflow
+        }
+      }))
+    }
+  }
+
   const handleDocTypeChange = (value: string) => {
     setSelectedDocType(value)
     setAvailableFieldTags(fieldTagsByDocType[value] || [])
@@ -184,65 +246,98 @@ export function SchoolWorkflow() {
     setAttachments(attachments.filter((_, i) => i !== index))
   }
 
+  // Group workflow items by parent workflow
+  const groupedWorkflow = workflow.reduce((acc, item) => {
+    const group = item.parentWorkflow || "Main Workflow";
+    if (!acc[group]) {
+      acc[group] = [];
+    }
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, WorkflowItem[]>);
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>School Workflow</CardTitle>
-          <CardDescription>View and edit the workflow for admission process.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>School Workflow</CardTitle>
+            <CardDescription>View and edit the workflow for admission process.</CardDescription>
+          </div>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Workflow
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader className="bg-muted">
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Email Title</TableHead>
-                  <TableHead>Attachments</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workflow.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          item.status === "Form Submitted"
-                            ? "bg-info-light text-info"
-                            : item.status === "Under Assessment"
-                              ? "bg-warning-light text-warning"
-                              : item.status === "Admission Letter Sent"
-                                ? "bg-primary-light text-primary"
-                                : item.status === "Awaiting Payment"
-                                  ? "bg-secondary-light text-secondary"
-                                  : "bg-success-light text-success"
-                        }
-                      >
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{item.emailTitle}</TableCell>
-                    <TableCell>
-                      {item.attachments.length > 0 ? (
-                        <Badge variant="outline">{item.attachments.length} files</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">None</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditEmail(item)}>
-                        <Mail className="mr-2 h-4 w-4" />
-                        Edit Email
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {Object.entries(groupedWorkflow).map(([groupName, items]) => (
+            <div key={groupName} className="mb-8">
+              <h3 className="text-lg font-semibold mb-4">{groupName}</h3>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Email Title</TableHead>
+                      <TableHead>Attachments</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.title}</TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              item.status === "Form Submitted"
+                                ? "bg-info-light text-info"
+                                : item.status === "Under Assessment"
+                                  ? "bg-warning-light text-warning"
+                                  : item.status === "Admission Letter Sent"
+                                    ? "bg-primary-light text-primary"
+                                    : item.status === "Awaiting Payment"
+                                      ? "bg-secondary-light text-secondary"
+                                      : "bg-success-light text-success"
+                            }
+                          >
+                            {item.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{item.emailTitle}</TableCell>
+                        <TableCell>
+                          {item.attachments.length > 0 ? (
+                            <Badge variant="outline">{item.attachments.length} files</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">None</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditEmail(item)}>
+                              <Mail className="mr-2 h-4 w-4" />
+                              Edit Email
+                            </Button>
+                            {item.isCustom && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteWorkflow(item.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
@@ -355,6 +450,46 @@ export function SchoolWorkflow() {
               Cancel
             </Button>
             <Button onClick={handleUpdateContent}>Update Content</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Workflow</DialogTitle>
+            <DialogDescription>
+              Create a new workflow item that will be added under the "In Review" section.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="workflow-title">Workflow Title</Label>
+              <Input
+                id="workflow-title"
+                value={newWorkflowTitle}
+                onChange={(e) => setNewWorkflowTitle(e.target.value)}
+                placeholder="Enter workflow title"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="workflow-status">Status Name</Label>
+              <Input
+                id="workflow-status"
+                value={newWorkflowStatus}
+                onChange={(e) => setNewWorkflowStatus(e.target.value)}
+                placeholder="Enter status name"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddWorkflow}>Add Workflow</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

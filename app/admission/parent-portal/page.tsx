@@ -167,7 +167,7 @@ const ParentPortal = () => {
   const children: Child[] = [
     {
       id: "1",
-      name: "Sarah Elizabeth Johnson",
+      name: "Sarah Elizabet Johnson",
       class: "Grade 5 - Advanced Track",
       status: "admitted",
       applicationDate: "2024-01-15",

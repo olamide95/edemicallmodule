@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pencil, Save } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 type ClassFee = {
   id: number
@@ -22,6 +23,8 @@ type ClassFee = {
 export function FeeConfiguration() {
   const [classes, setClasses] = useState<ClassFee[]>([])
   const [currency, setCurrency] = useState("USD")
+  const [isSaving, setIsSaving] = useState(false)
+  const router = useRouter()
 
   // Load classes from local storage
   useEffect(() => {
@@ -61,7 +64,7 @@ export function FeeConfiguration() {
     if (savedData) {
       const data = JSON.parse(savedData)
       const updatedClasses = data.classes.map((cls: any) => {
-        const updatedClass = classes.find(c => c.id === cls.id && c.editing === false)
+        const updatedClass = classes.find(c => c.id === cls.id)
         return updatedClass ? { ...cls, fee: updatedClass.fee, active: updatedClass.active } : cls
       })
       
@@ -90,6 +93,12 @@ export function FeeConfiguration() {
   }
 
   const handleSaveAll = () => {
+    setIsSaving(true)
+    
+    // Exit all edit states first
+    setClasses(classes.map((c) => ({ ...c, editing: false })))
+    
+    // Save to local storage
     const savedData = localStorage.getItem('onboardingData')
     if (savedData) {
       const data = JSON.parse(savedData)
@@ -106,6 +115,15 @@ export function FeeConfiguration() {
           currency
         }
       }))
+      
+      // Simulate a brief delay to show saving state
+      setTimeout(() => {
+        setIsSaving(false)
+        // Navigate back to the list page
+        router.push("/onboarding/classes")
+      }, 500)
+    } else {
+      setIsSaving(false)
     }
   }
 
@@ -198,7 +216,9 @@ export function FeeConfiguration() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-end">
-          <Button onClick={handleSaveAll}>Save All Changes</Button>
+          <Button onClick={handleSaveAll} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save All Changes"}
+          </Button>
         </CardFooter>
       </Card>
     </div>

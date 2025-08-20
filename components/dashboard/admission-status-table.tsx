@@ -1,3 +1,4 @@
+// components/admission-status-table.tsx
 "use client"
 import { useState, useEffect } from "react"
 import { ArrowUpDown, MoreHorizontal, Download, ChevronRight, Eye, Plus } from "lucide-react"
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
+import { sendEmail } from "@/lib/mailjet"
 
 // Helper function to calculate age from date of birth
 function calculateAge(dob: string) {
@@ -35,18 +37,58 @@ function getParentName(response: any) {
   return response.fatherName || response.motherName || 'Not specified'
 }
 
+// Helper function to get parent email
+function getParentEmail(response: any) {
+  return response.fatherEmail || response.motherEmail || null
+}
+
+// Function to replace template tags with actual data
+function replaceTemplateTags(content: string, studentData: any) {
+  let processedContent = content
+  
+  // Replace all available tags
+  const tags = {
+    'Parent_Name': getParentName(studentData),
+    'Student_Name': `${studentData.firstName} ${studentData.lastName}`,
+    'Application_Date': new Date(studentData.submittedAt).toLocaleDateString(),
+    'Class_Name': studentData.class || 'Not specified',
+    'Assessment_Date': studentData.assessmentDate || 'To be scheduled',
+    'Assessment_Time': studentData.assessmentTime || 'To be scheduled',
+    'Academic_Year': new Date().getFullYear() + '/' + (new Date().getFullYear() + 1),
+    'Fee_Amount': studentData.feeAmount || 'To be determined',
+    'Payment_Deadline': studentData.paymentDeadline || 'To be determined',
+    'Orientation_Date': studentData.orientationDate || 'To be scheduled'
+  }
+  
+  Object.entries(tags).forEach(([tag, value]) => {
+    processedContent = processedContent.replace(new RegExp(`\\[${tag}\\]`, 'g'), value)
+  })
+  
+  return processedContent
+}
+
 export function AdmissionStatusTable() {
   const router = useRouter()
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [selectedRows, setSelectedRows] = useState<string[]>([])
   const [admissionData, setAdmissionData] = useState<any[]>([])
+  const [workflow, setWorkflow] = useState<any[]>([])
 
   // Load data from localStorage
   useEffect(() => {
     const savedResponses = localStorage.getItem('admissionFormResponses')
     if (savedResponses) {
       setAdmissionData(JSON.parse(savedResponses))
+    }
+
+    // Load workflow data
+    const savedOnboardingData = localStorage.getItem('onboardingData')
+    if (savedOnboardingData) {
+      const data = JSON.parse(savedOnboardingData)
+      if (data.admissionSettings?.workflow) {
+        setWorkflow(data.admissionSettings.workflow)
+      }
     }
   }, [])
 
@@ -91,27 +133,78 @@ export function AdmissionStatusTable() {
     }
   }
 
-  const handleNewEnrollment = () => {
-    router.push("/admission/form")
+  const handleNewEnrollment = () => { 
+    router.push("/admission/adminsetup")
+  }
+
+  // Function to send email when status changes
+  const sendStatusEmail = async (studentData: any, newStatus: string) => {
+    const parentEmail = "olatosin163@gmail.com";
+    if (!parentEmail) {
+      console.warn("No email address found for parent")
+      return
+    }
+
+    // Find the workflow template for this status
+    const workflowItem = workflow.find(item => item.status === newStatus)
+    if (!workflowItem) {
+      console.warn(`No email template found for status: ${newStatus}`)
+      return
+    }
+
+    try {
+      // Replace template tags with actual data
+      const emailSubject = replaceTemplateTags(workflowItem.emailTitle, studentData)
+      const emailBody = replaceTemplateTags(workflowItem.emailContent, studentData)
+
+      // Send email using Mailjet
+      await sendEmail({
+        to: "olatosin163@gmail.com",
+        subject: emailSubject,
+        text: emailBody,
+        html: emailBody.replace(/\n/g, '<br>'),
+        attachments: workflowItem.attachments || []
+      })
+
+      console.log(`Email sent successfully for status change to ${newStatus}`)
+    } catch (error) {
+      console.error("Failed to send email:", error)
+    }
   }
 
   // Update status handler
-  const updateStatus = (id: string, newStatus: string) => {
+  const updateStatus = async (id: string, newStatus: string) => {
+    const studentData = admissionData.find(item => item.id === id)
+    if (!studentData) return
+
     const updatedData = admissionData.map(item => 
       item.id === id ? { ...item, status: newStatus, admissionState: newStatus } : item
     )
+    
     setAdmissionData(updatedData)
     localStorage.setItem('admissionFormResponses', JSON.stringify(updatedData))
+    
+    // Send email notification
+    await sendStatusEmail(studentData, newStatus)
   }
 
   // Bulk status update
-  const handleBulkStatusChange = (newStatus: string) => {
+  const handleBulkStatusChange = async (newStatus: string) => {
     const updatedData = admissionData.map(item => 
       selectedRows.includes(item.id) ? { ...item, status: newStatus, admissionState: newStatus } : item
     )
+    
     setAdmissionData(updatedData)
     setSelectedRows([])
     localStorage.setItem('admissionFormResponses', JSON.stringify(updatedData))
+    
+    // Send emails for all selected students
+    for (const id of selectedRows) {
+      const studentData = admissionData.find(item => item.id === id)
+      if (studentData) {
+        await sendStatusEmail(studentData, newStatus)
+      }
+    }
   }
 
   // Delete handler
@@ -186,7 +279,9 @@ export function AdmissionStatusTable() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
-          <Button variant="outline" size="sm" onClick={handleNewEnrollment}>
+          <Button
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-md transition-colors"
+            variant="outline" size="sm" onClick={handleNewEnrollment}>
             <Plus className="mr-2 h-4 w-4" /> New Enrollment
           </Button>
           <Button variant="outline" size="sm" disabled={selectedRows.length === 0} onClick={handleBulkExport}>
@@ -217,6 +312,7 @@ export function AdmissionStatusTable() {
                   </Button>
                 </TableHead>
                 <TableHead>Parent Name</TableHead>
+                <TableHead>Parent Email</TableHead>
                 <TableHead>Class</TableHead>
                 <TableHead>Age</TableHead>
                 <TableHead>Contact</TableHead>
@@ -250,6 +346,9 @@ export function AdmissionStatusTable() {
                   <TableCell>
                     {getParentName(row)}
                   </TableCell>
+                  <TableCell>
+                    {getParentEmail(row) || 'Not specified'}
+                  </TableCell>
                   <TableCell>{row.class || 'Not specified'}</TableCell>
                   <TableCell>
                     {row.age || calculateAge(row.dateOfBirth)}
@@ -281,24 +380,6 @@ export function AdmissionStatusTable() {
                           <TooltipContent>View Details</TooltipContent>
                         </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Move to Next Stage</TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Download</TooltipContent>
-                        </Tooltip>
-
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -306,7 +387,23 @@ export function AdmissionStatusTable() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => updateStatus(row.id, "Form Submitted")}>
+                              Mark as Form Submitted
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(row.id, "Under Assessment")}>
+                              Mark as Under Assessment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(row.id, "Admission Letter Sent")}>
+                              Mark as Letter Sent
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(row.id, "Awaiting Payment")}>
+                              Mark as Awaiting Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(row.id, "Admitted")}>
+                              Mark as Admitted
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem>Edit Details</DropdownMenuItem>
                             <DropdownMenuItem>Send Email</DropdownMenuItem>
                             <DropdownMenuSeparator />

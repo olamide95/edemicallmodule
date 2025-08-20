@@ -91,6 +91,72 @@ const exportFieldGroups = [
 // Flatten field groups for easier access
 const allExportFields = exportFieldGroups.flatMap((group) => group.fields)
 
+// Helper function to get initials from a name
+const getInitials = (name) => {
+  if (!name || name === "Not specified") return "N/A"
+  return name
+    .split(" ")
+    .map(word => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+// Component to display overlapping avatars for parents/guardians
+const ParentAvatars = ({ parents }) => {
+  const parentList = []
+  
+  if (parents.father && parents.father.name && parents.father.name !== "Not specified") {
+    parentList.push({
+      name: parents.father.name,
+      initials: getInitials(parents.father.name),
+      type: "father"
+    })
+  }
+  
+  if (parents.mother && parents.mother.name && parents.mother.name !== "Not specified") {
+    parentList.push({
+      name: parents.mother.name,
+      initials: getInitials(parents.mother.name),
+      type: "mother"
+    })
+  }
+  
+  if (parents.guardian && parents.guardian.name && parents.guardian.name !== "Not specified") {
+    parentList.push({
+      name: parents.guardian.name,
+      initials: getInitials(parents.guardian.name),
+      type: "guardian"
+    })
+  }
+  
+  if (parentList.length === 0) {
+    return (
+      <div className="flex items-center">
+        <Avatar className="h-8 w-8 border-2 border-background">
+          <AvatarFallback className="text-xs">N/A</AvatarFallback>
+        </Avatar>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="flex items-center">
+      {parentList.map((parent, index) => (
+        <Avatar 
+          key={index} 
+          className="h-8 w-8 border-2 border-background"
+          style={{ marginLeft: index > 0 ? '-8px' : '0' }}
+        >
+          <AvatarFallback className="text-xs bg-muted">
+            {parent.initials}
+          </AvatarFallback>
+        </Avatar>
+      ))}
+    </div>
+  )
+}
+
 export function StudentInformation() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClass, setSelectedClass] = useState("")
@@ -630,7 +696,7 @@ export function StudentInformation() {
                       <TableCell>
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={student.avatar || "/placeholder.svg"} alt={student.fullName} />
-                          <AvatarFallback>{student.fullName.substring(0, 2)}</AvatarFallback>
+                          <AvatarFallback>{getInitials(student.fullName)}</AvatarFallback>
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">{student.fullName}</TableCell>
@@ -649,30 +715,15 @@ export function StudentInformation() {
                       <TableCell>{formatDate(student.birthdate)}</TableCell>
                       <TableCell>{student.age} years</TableCell>
                       <TableCell>
-                        <div className="flex flex-col space-y-1">
-                          {student.parents.father && (
-                            <div className="text-xs">
-                              <span className="font-medium">Father:</span> {student.parents.father.name}
-                            </div>
-                          )}
-                          {student.parents.mother && (
-                            <div className="text-xs">
-                              <span className="font-medium">Mother:</span> {student.parents.mother.name}
-                            </div>
-                          )}
-                          {student.parents.guardian && (
-                            <div className="text-xs">
-                              <span className="font-medium">Guardian:</span> {student.parents.guardian.name}
-                            </div>
-                          )}
-                        </div>
+                        <ParentAvatars parents={student.parents} />
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col space-y-1">
-                          <div className="text-xs">
-                            <span className="font-medium">{student.emergencyContact.name}</span>
-                          </div>
-                          <div className="text-xs">{student.emergencyContact.phone}</div>
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 border-2 border-background">
+                            <AvatarFallback className="text-xs bg-muted">
+                              {getInitials(student.emergencyContact.name)}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -722,7 +773,7 @@ export function StudentInformation() {
               <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                 <Avatar className="h-24 w-24">
                   <AvatarImage src={selectedStudent.avatar || "/placeholder.svg"} alt={selectedStudent.fullName} />
-                  <AvatarFallback className="text-xl">{selectedStudent.fullName.substring(0, 2)}</AvatarFallback>
+                  <AvatarFallback className="text-xl">{getInitials(selectedStudent.fullName)}</AvatarFallback>
                 </Avatar>
 
                 <div className="space-y-2 text-center md:text-left">
@@ -815,7 +866,7 @@ export function StudentInformation() {
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-muted-foreground">Email</p>
-                          <p>{selectedStudent.parents.father.email}</p>
+                                              <p>{selectedStudent.parents.father.email}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-muted-foreground">Occupation</p>
@@ -946,3 +997,4 @@ export function StudentInformation() {
     </div>
   )
 }
+

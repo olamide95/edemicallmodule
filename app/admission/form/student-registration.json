@@ -1,14 +1,6 @@
 {
   "meta": {
-    "name": "Student Registration Form",
-    "module": "Education",
-    "type": "form",
-    "isSubmittable": false,
-    "icon": "file-text",
-    "iconColor": "blue",
-    "namingRule": "autoincrement",
-    "autoname": "",
-    "createdAt": "2025-06-27T21:57:09.300Z"
+    "createdAt": "2025-08-19T14:16:36.562Z"
   },
   "tabs": [
     {
@@ -80,12 +72,10 @@
                   "inListView": false,
                   "inListFilter": false
                 },
-                
                 {
                   "id": "file",
                   "name": "file_upload",
                   "label": "File Upload",
-                  "type": "file",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -93,7 +83,6 @@
                   "inListView": false,
                   "inListFilter": false
                 },
-              
                 {
                   "id": "gender",
                   "name": "gender",
@@ -155,6 +144,18 @@
                   "allowInQuickEntry": false,
                   "inListView": false,
                   "inListFilter": false
+                },
+                {
+                  "id": "e1d18db9-80af-46fb-a783-b09e7670233e",
+                  "name": "file_upload",
+                  "label": "File Upload",
+                  "type": "file",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
                 }
               ]
             },
@@ -165,25 +166,13 @@
                   "id": "class",
                   "name": "class",
                   "label": "Class",
+                  "type": "select",
                   "isRequired": true,
                   "isReadOnly": false,
                   "isHidden": false,
                   "options": [
-                    "Nursery",
-                    "KG1",
-                    "KG2",
-                    "Grade 1",
-                    "Grade 2",
-                    "Grade 3",
-                    "Grade 4",
-                    "Grade 5",
-                    "Grade 6",
-                    "Grade 7",
-                    "Grade 8",
-                    "Grade 9",
-                    "Grade 10",
-                    "Grade 11",
-                    "Grade 12"
+                    "primary3",
+                    "primary4"
                   ],
                   "allowInQuickEntry": false,
                   "inListView": false,
@@ -193,6 +182,7 @@
                   "id": "yearOfAdmission",
                   "name": "yearOfAdmission",
                   "label": "Year of Admission",
+                  "type": "date",
                   "isRequired": true,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -204,18 +194,6 @@
                     "2021",
                     "2020"
                   ],
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "enrollmentDate",
-                  "name": "enrollmentDate",
-                  "label": "Enrollment Date",
-                  "isRequired": true,
-                  "isReadOnly": true,
-                  "isHidden": false,
-                  "defaultValue": "2025-06-27",
                   "allowInQuickEntry": false,
                   "inListView": false,
                   "inListFilter": false
@@ -269,7 +247,18 @@
                   "id": "175f0537-f3b2-49c0-8bb8-dfb60b293ceb",
                   "name": "image",
                   "label": "Student Photo",
-                  "type": "image",
+                  "isRequired": false,
+                  "isReadOnly": false,
+                  "isHidden": false,
+                  "allowInQuickEntry": false,
+                  "inListView": false,
+                  "inListFilter": false
+                },
+                {
+                  "id": "2243198d-00d4-4d80-85c8-4056ca6412f2",
+                  "name": "Enrollement date",
+                  "label": "Enrollment Date",
+                  "type": "date",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -519,7 +508,6 @@
                   "id": "fatherPhoto",
                   "name": "fatherPhoto",
                   "label": "Photo",
-                  "type": "image",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -632,7 +620,6 @@
                   "id": "motherPhoto",
                   "name": "motherPhoto",
                   "label": "Photo",
-                  "type": "image",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -733,7 +720,6 @@
                   "id": "guardianPhoto",
                   "name": "guardianPhoto",
                   "label": "Photo",
-                  "type": "image",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1053,7 +1039,7 @@
                 {
                   "id": "sibling1Name",
                   "name": "sibling1Name",
-                  "label": "Sibling 1 Name",
+                  "label": "Sibling Name",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1084,110 +1070,45 @@
                   "inListFilter": false
                 },
                 {
-                  "id": "sibling2Name",
-                  "name": "sibling2Name",
-                  "label": "Sibling 2 Name",
+                  "id": "sibling1Relationship",
+                  "name": "sibling1Relationship",
+                  "label": "Relationship",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
+                  "options": [
+                    "Brother",
+                    "Sister",
+                    "Half-brother",
+                    "Half-sister",
+                    "Step-brother",
+                    "Step-sister"
+                  ],
                   "allowInQuickEntry": false,
                   "inListView": false,
                   "inListFilter": false
                 }
               ]
-            },
+            }
+          ]
+        },
+        {
+          "id": "addSiblingSection",
+          "title": "Add More Siblings",
+          "isCollapsed": false,
+          "columns": [
             {
-              "id": "siblingColumn2",
+              "id": "addSiblingColumn",
               "fields": [
                 {
-                  "id": "sibling2Age",
-                  "name": "sibling2Age",
-                  "label": "Age",
+                  "id": "addSiblingButton",
+                  "name": "addSiblingButton",
+                  "label": "Add Another Sibling",
+                  "type": "button",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "sibling2School",
-                  "name": "sibling2School",
-                  "label": "School/Institution",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "sibling3Name",
-                  "name": "sibling3Name",
-                  "label": "Sibling 3 Name",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "sibling3Age",
-                  "name": "sibling3Age",
-                  "label": "Age",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                }
-              ]
-            },
-            {
-              "id": "siblingColumn3",
-              "fields": [
-                {
-                  "id": "sibling3School",
-                  "name": "sibling3School",
-                  "label": "School/Institution",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "sibling4Name",
-                  "name": "sibling4Name",
-                  "label": "Sibling 4 Name",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "sibling4Age",
-                  "name": "sibling4Age",
-                  "label": "Age",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
-                  "allowInQuickEntry": false,
-                  "inListView": false,
-                  "inListFilter": false
-                },
-                {
-                  "id": "sibling4School",
-                  "name": "sibling4School",
-                  "label": "School/Institution",
-                  "isRequired": false,
-                  "isReadOnly": false,
-                  "isHidden": false,
+                  "buttonAction": "addSibling",
                   "allowInQuickEntry": false,
                   "inListView": false,
                   "inListFilter": false
@@ -1215,7 +1136,6 @@
                   "id": "birthCertificate",
                   "name": "birthCertificate",
                   "label": "Birth Certificate",
-                  "type": "file",
                   "isRequired": true,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1227,7 +1147,6 @@
                   "id": "immunizationRecords",
                   "name": "immunizationRecords",
                   "label": "Immunization Records",
-                  "type": "file",
                   "isRequired": true,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1239,7 +1158,6 @@
                   "id": "previousSchoolReport",
                   "name": "previousSchoolReport",
                   "label": "Previous School Report",
-                  "type": "file",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1256,7 +1174,6 @@
                   "id": "medicalReport",
                   "name": "medicalReport",
                   "label": "Medical Report",
-                  "type": "file",
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1268,7 +1185,6 @@
                   "id": "parentIdProof",
                   "name": "parentIdProof",
                   "label": "Parent ID Proof",
-                  "type": "file",
                   "isRequired": true,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1280,8 +1196,6 @@
                   "id": "otherDocuments",
                   "name": "otherDocuments",
                   "label": "Other Documents",
-                  "type": "file",
-                  "isMultiple": true,
                   "isRequired": false,
                   "isReadOnly": false,
                   "isHidden": false,
@@ -1297,5 +1211,62 @@
     }
   ],
   "paymentGateways": [],
-  "documentStates": []
+  "documentStates": [],
+  "siblingTemplate": {
+    "id": "siblingTemplate",
+    "fields": [
+      {
+        "id": "siblingName",
+        "name": "siblingName",
+        "label": "Sibling Name",
+        "isRequired": false,
+        "isReadOnly": false,
+        "isHidden": false,
+        "allowInQuickEntry": false,
+        "inListView": false,
+        "inListFilter": false
+      },
+      {
+        "id": "siblingAge",
+        "name": "siblingAge",
+        "label": "Age",
+        "isRequired": false,
+        "isReadOnly": false,
+        "isHidden": false,
+        "allowInQuickEntry": false,
+        "inListView": false,
+        "inListFilter": false
+      },
+      {
+        "id": "siblingSchool",
+        "name": "siblingSchool",
+        "label": "School/Institution",
+        "isRequired": false,
+        "isReadOnly": false,
+        "isHidden": false,
+        "allowInQuickEntry": false,
+        "inListView": false,
+        "inListFilter": false
+      },
+      {
+        "id": "siblingRelationship",
+        "name": "siblingRelationship",
+        "label": "Relationship",
+        "isRequired": false,
+        "isReadOnly": false,
+        "isHidden": false,
+        "options": [
+          "Brother",
+          "Sister",
+          "Half-brother",
+          "Half-sister",
+          "Step-brother",
+          "Step-sister"
+        ],
+        "allowInQuickEntry": false,
+        "inListView": false,
+        "inListFilter": false
+      }
+    ]
+  }
 }
