@@ -32,6 +32,11 @@ interface StaffMember {
   previousExperience?: string
   certifications?: string
   responsibilities?: string
+  isSchoolStaff: boolean
+  vendorName?: string
+  vendorCompany?: string
+  vendorContact?: string
+  vendorAddress?: string
 }
 
 interface Bus {
@@ -67,14 +72,18 @@ export default function AddStaffPage() {
     specialTraining: false,
     previousExperience: "",
     certifications: "",
-    responsibilities: ""
+    responsibilities: "",
+    isSchoolStaff: true,
+    vendorName: "",
+    vendorCompany: "",
+    vendorContact: "",
+    vendorAddress: ""
   })
 
   useEffect(() => {
-    // Load data from localStorage
-    const savedStaff = localStorage.getItem('employees')
-    const savedBuses = localStorage.getItem('buses')
-    const savedEmployees = localStorage.getItem('employees')
+    const savedStaff = localStorage.getItem("employees")
+    const savedBuses = localStorage.getItem("buses")
+    const savedEmployees = localStorage.getItem("employees")
 
     if (savedStaff) setStaff(JSON.parse(savedStaff))
     if (savedBuses) setBuses(JSON.parse(savedBuses))
@@ -83,7 +92,6 @@ export default function AddStaffPage() {
     setIsLoading(false)
   }, [])
 
-  // Filter organization staff based on search and role filter
   const filteredStaff = employees.filter((emp) => {
     const matchesSearch =
       emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,7 +99,6 @@ export default function AddStaffPage() {
       emp.department.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesRole = selectedRole === "all" || emp.role.toLowerCase() === selectedRole.toLowerCase()
-
     return matchesSearch && matchesRole
   })
 
@@ -106,14 +113,13 @@ export default function AddStaffPage() {
   const handleChange = (field: keyof StaffMember, value: any) => {
     setStaffData({
       ...staffData,
-      [field]: value
+      [field]: value,
     })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Create new staff member
+
     const newStaff: StaffMember = {
       id: staffData.id || Date.now().toString(),
       name: staffData.name || "",
@@ -121,7 +127,7 @@ export default function AddStaffPage() {
       email: staffData.email,
       license: staffData.license,
       bus: staffData.bus || "",
-      route: buses.find(b => b.id === staffData.bus)?.route || "",
+      route: buses.find((b) => b.id === staffData.bus)?.route || "",
       status: staffData.status || "active",
       role: staffData.role || "driver",
       photo: staffData.photo,
@@ -130,20 +136,21 @@ export default function AddStaffPage() {
       specialTraining: staffData.specialTraining || false,
       previousExperience: staffData.previousExperience,
       certifications: staffData.certifications,
-      responsibilities: staffData.responsibilities
+      responsibilities: staffData.responsibilities,
+      isSchoolStaff: staffData.isSchoolStaff || false,
+      vendorName: staffData.vendorName,
+      vendorCompany: staffData.vendorCompany,
+      vendorContact: staffData.vendorContact,
+      vendorAddress: staffData.vendorAddress,
     }
 
-    // Update staff in localStorage
     const updatedStaff = [...staff, newStaff]
-    localStorage.setItem('employees', JSON.stringify(updatedStaff))
-    
-    // Redirect to staff page
-    router.push('/schoolbus/admin/staff')
+    localStorage.setItem("employees", JSON.stringify(updatedStaff))
+
+    router.push("/schoolbus/admin/staff")
   }
 
-  if (isLoading) {
-    return <div>Loading...</div>
-  }
+  if (isLoading) return <div>Loading...</div>
 
   return (
     <div className="flex flex-col gap-6">
@@ -164,8 +171,7 @@ export default function AddStaffPage() {
           <TabsTrigger value="existing">Existing Staff</TabsTrigger>
           <TabsTrigger value="new">New Staff</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="existing" className="space-y-4">
+          <TabsContent value="existing" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Select Staff from Organization</CardTitle>
@@ -387,6 +393,7 @@ export default function AddStaffPage() {
           )}
         </TabsContent>
 
+        {/* --- NEW STAFF FORM --- */}
         <TabsContent value="new" className="space-y-4">
           <Card>
             <CardHeader>
@@ -399,20 +406,20 @@ export default function AddStaffPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
-                    <Input 
-                      id="name" 
-                      placeholder="Enter full name" 
-                      required 
+                    <Input
+                      id="name"
+                      placeholder="Enter full name"
+                      required
                       value={staffData.name || ""}
                       onChange={(e) => handleChange("name", e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input 
-                      id="phone" 
-                      placeholder="Enter phone number" 
-                      required 
+                    <Input
+                      id="phone"
+                      placeholder="Enter phone number"
+                      required
                       value={staffData.phone || ""}
                       onChange={(e) => handleChange("phone", e.target.value)}
                     />
@@ -421,10 +428,10 @@ export default function AddStaffPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="Enter email address" 
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter email address"
                     value={staffData.email || ""}
                     onChange={(e) => handleChange("email", e.target.value)}
                   />
@@ -433,7 +440,7 @@ export default function AddStaffPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
-                    <Select 
+                    <Select
                       value={staffData.role}
                       onValueChange={(value) => handleChange("role", value as "driver" | "administrator")}
                       required
@@ -449,7 +456,7 @@ export default function AddStaffPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="assigned-bus">Assigned Bus</Label>
-                    <Select 
+                    <Select
                       value={staffData.bus}
                       onValueChange={(value) => handleChange("bus", value)}
                       required
@@ -469,6 +476,62 @@ export default function AddStaffPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>School Staff?</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={staffData.isSchoolStaff || false}
+                      onCheckedChange={(checked) => handleChange("isSchoolStaff", checked)}
+                    />
+                    <span>{staffData.isSchoolStaff ? "Yes (Internal)" : "No (External Vendor)"}</span>
+                  </div>
+                </div>
+
+                {/* Extra vendor fields if not school staff */}
+                {!staffData.isSchoolStaff && (
+                  <div className="space-y-4 border p-4 rounded-md bg-muted/30">
+                    <h4 className="text-md font-semibold">Vendor Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorName">Vendor Contact Person</Label>
+                        <Input
+                          id="vendorName"
+                          placeholder="Enter vendor contact person"
+                          value={staffData.vendorName || ""}
+                          onChange={(e) => handleChange("vendorName", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorCompany">Vendor Company</Label>
+                        <Input
+                          id="vendorCompany"
+                          placeholder="Enter vendor company"
+                          value={staffData.vendorCompany || ""}
+                          onChange={(e) => handleChange("vendorCompany", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorContact">Vendor Phone</Label>
+                        <Input
+                          id="vendorContact"
+                          placeholder="Enter vendor phone"
+                          value={staffData.vendorContact || ""}
+                          onChange={(e) => handleChange("vendorContact", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorAddress">Vendor Address</Label>
+                        <Input
+                          id="vendorAddress"
+                          placeholder="Enter vendor address"
+                          value={staffData.vendorAddress || ""}
+                          onChange={(e) => handleChange("vendorAddress", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
                   <Label htmlFor="photo">Staff Photo</Label>
                   <div className="flex items-center gap-4">
                     <Avatar className="h-16 w-16">
@@ -477,10 +540,10 @@ export default function AddStaffPage() {
                         {staffData.name?.substring(0, 2).toUpperCase() || "ST"}
                       </AvatarFallback>
                     </Avatar>
-                    <Input 
-                      id="photo" 
-                      type="file" 
-                      className="max-w-sm" 
+                    <Input
+                      id="photo"
+                      type="file"
+                      className="max-w-sm"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
                           const reader = new FileReader()
@@ -496,6 +559,7 @@ export default function AddStaffPage() {
 
                 <Separator />
 
+                {/* Role-specific fields */}
                 <div>
                   <h3 className="text-lg font-medium mb-4">Role-Specific Details</h3>
                   <Tabs defaultValue="driver" className="w-full">
@@ -507,18 +571,18 @@ export default function AddStaffPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="license-number">License Number</Label>
-                          <Input 
-                            id="license-number" 
-                            placeholder="Enter driver license number" 
+                          <Input
+                            id="license-number"
+                            placeholder="Enter driver license number"
                             value={staffData.license || ""}
                             onChange={(e) => handleChange("license", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="license-expiry">License Expiry Date</Label>
-                          <Input 
-                            id="license-expiry" 
-                            type="date" 
+                          <Input
+                            id="license-expiry"
+                            type="date"
                             value={staffData.licenseExpiry || ""}
                             onChange={(e) => handleChange("licenseExpiry", e.target.value)}
                           />

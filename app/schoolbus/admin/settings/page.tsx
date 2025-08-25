@@ -112,7 +112,7 @@ export default function SettingsPage() {
               <Separator />
 
               <div className="grid gap-4">
-                <Label htmlFor="current-term">Current Academic Term</Label>
+                <Label htmlFor="current-term">Current Academic session</Label>
                 <Select 
                   value={settings.currentTerm} 
                   onValueChange={(value) => handleSettingChange("currentTerm", value)}

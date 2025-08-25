@@ -45,6 +45,7 @@ import {
   XCircle,
   AlertCircle,
 } from "lucide-react"
+import { useRouter } from "next/navigation";
 
 interface Enrollment {
   id: string
@@ -149,6 +150,8 @@ const mockEnrollments: Enrollment[] = [
 export default function EnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>(mockEnrollments)
   const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter();
+
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [selectedEnrollments, setSelectedEnrollments] = useState<string[]>([])
   const [isGroupChatOpen, setIsGroupChatOpen] = useState(false)
@@ -328,10 +331,13 @@ export default function EnrollmentsPage() {
               </DialogContent>
             </Dialog>
           )}
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-            <Plus className="mr-2 h-4 w-4" />
-            New Enrollment
-          </Button>
+         <Button
+      onClick={() => router.push("/schoolbus/admin/enrollments/new")}
+      className="bg-purple-600 hover:bg-purple-700 text-white"
+    >
+      <Plus className="mr-2 h-4 w-4" />
+      New Enrollment
+    </Button>
         </div>
       </div>
 

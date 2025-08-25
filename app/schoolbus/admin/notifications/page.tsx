@@ -40,6 +40,7 @@ import {
   Eye,
   Trash2,
   Edit,
+  X,
 } from "lucide-react"
 
 interface Notification {
@@ -209,6 +210,10 @@ export default function AdminNotificationsPage() {
     scheduledDate: undefined as Date | undefined,
     scheduledTime: "",
   })
+  const [editingNotification, setEditingNotification] = useState<Notification | null>(null)
+  const [viewingNotification, setViewingNotification] = useState<Notification | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
 
   const filteredNotifications = notifications.filter((notification) => {
     const matchesSearch =
@@ -292,6 +297,48 @@ export default function AdminNotificationsPage() {
     setSelectedDocType("")
   }
 
+  const handleEditNotification = (notification: Notification) => {
+    setEditingNotification(notification)
+    setNotificationData({
+      title: notification.title,
+      message: notification.message,
+      channels: [...notification.channels],
+      sendNow: notification.status !== "scheduled",
+      scheduledDate: notification.scheduledAt ? new Date(notification.scheduledAt) : undefined,
+      scheduledTime: notification.scheduledAt ? format(new Date(notification.scheduledAt), "HH:mm") : "",
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateNotification = () => {
+    if (!editingNotification) return
+
+    const updatedNotification: Notification = {
+      ...editingNotification,
+      title: notificationData.title,
+      message: notificationData.message,
+      channels: notificationData.channels,
+      status: notificationData.sendNow ? "sent" : "scheduled",
+      scheduledAt: notificationData.sendNow ? undefined : notificationData.scheduledDate?.toISOString(),
+    }
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === editingNotification.id ? updatedNotification : n))
+    )
+    setIsEditDialogOpen(false)
+    setEditingNotification(null)
+    resetForm()
+  }
+
+  const handleDeleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const handleViewNotification = (notification: Notification) => {
+    setViewingNotification(notification)
+    setIsViewDialogOpen(true)
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "sent":
@@ -318,6 +365,17 @@ export default function AdminNotificationsPage() {
       default:
         return <Badge>Unknown</Badge>
     }
+  }
+
+  const getChannelIcon = (channel: string) => {
+    const icons = {
+      push: Bell,
+      email: Mail,
+      sms: MessageSquare,
+      whatsapp: Smartphone,
+    }
+    const Icon = icons[channel as keyof typeof icons]
+    return Icon ? <Icon key={channel} className="h-4 w-4" /> : null
   }
 
   return (
@@ -587,13 +645,26 @@ export default function AdminNotificationsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleViewNotification(notification)}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditNotification(notification)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteNotification(notification.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -608,16 +679,7 @@ export default function AdminNotificationsPage() {
                     {notification.recipients} recipients
                   </span>
                   <div className="flex items-center gap-1">
-                    {notification.channels.map((channel) => {
-                      const icons = {
-                        push: Bell,
-                        email: Mail,
-                        sms: MessageSquare,
-                        whatsapp: Smartphone,
-                      }
-                      const Icon = icons[channel as keyof typeof icons]
-                      return Icon ? <Icon key={channel} className="h-4 w-4" /> : null
-                    })}
+                    {notification.channels.map((channel) => getChannelIcon(channel))}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -634,6 +696,221 @@ export default function AdminNotificationsPage() {
           </Card>
         ))}
       </div>
+
+      {/* View Notification Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              View Notification
+            </DialogTitle>
+            <DialogDescription>
+              Details of the notification sent to recipients.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingNotification && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Title</Label>
+                <p className="text-sm">{viewingNotification.title}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Message</Label>
+                <p className="text-sm whitespace-pre-wrap">{viewingNotification.message}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Status & Type</Label>
+                <div className="flex gap-2">
+                  {getStatusBadge(viewingNotification.status)}
+                  {getTypeBadge(viewingNotification.type)}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Channels</Label>
+                <div className="flex gap-2">
+                  {viewingNotification.channels.map(channel => (
+                    <Badge key={channel} variant="outline" className="flex items-center gap-1">
+                      {getChannelIcon(channel)}
+                      {channel}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Recipients</Label>
+                  <p className="text-sm flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    {viewingNotification.recipients}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Created</Label>
+                  <p className="text-sm">
+                    {format(new Date(viewingNotification.createdAt), "MMM dd, yyyy HH:mm")}
+                  </p>
+                </div>
+              </div>
+              
+              {viewingNotification.scheduledAt && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Scheduled For</Label>
+                  <p className="text-sm flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(new Date(viewingNotification.scheduledAt), "MMM dd, yyyy HH:mm")}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Notification Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Notification
+            </DialogTitle>
+            <DialogDescription>
+              Make changes to your notification here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Notification Title</Label>
+              <Input
+                id="edit-title"
+                value={notificationData.title}
+                onChange={(e) => setNotificationData((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter notification title"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-message">Message</Label>
+              <Textarea
+                id="edit-message"
+                value={notificationData.message}
+                onChange={(e) => setNotificationData((prev) => ({ ...prev, message: e.target.value }))}
+                placeholder="Enter your message here..."
+                rows={6}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notification Channels</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                {[
+                  { id: "push", label: "Push", icon: Bell },
+                  { id: "email", label: "Email", icon: Mail },
+                  { id: "sms", label: "SMS", icon: MessageSquare },
+                  { id: "whatsapp", label: "WhatsApp", icon: Smartphone },
+                ].map(({ id, label, icon: Icon }) => (
+                  <div key={id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-${id}`}
+                      checked={notificationData.channels.includes(id)}
+                      onCheckedChange={() => handleChannelToggle(id)}
+                    />
+                    <Label htmlFor={`edit-${id}`} className="flex items-center space-x-1 cursor-pointer">
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Send Options</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-sendNow"
+                    checked={notificationData.sendNow}
+                    onCheckedChange={(checked) =>
+                      setNotificationData((prev) => ({ ...prev, sendNow: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor="edit-sendNow">Send Now</Label>
+                </div>
+
+                {!notificationData.sendNow && (
+                  <div className="flex items-center space-x-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal",
+                            !notificationData.scheduledDate && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {notificationData.scheduledDate ? (
+                            format(notificationData.scheduledDate, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={notificationData.scheduledDate}
+                          onSelect={(date) => setNotificationData((prev) => ({ ...prev, scheduledDate: date }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <Input
+                      type="time"
+                      value={notificationData.scheduledTime}
+                      onChange={(e) =>
+                        setNotificationData((prev) => ({ ...prev, scheduledTime: e.target.value }))
+                      }
+                      className="w-32"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateNotification}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={
+                !notificationData.title || !notificationData.message || notificationData.channels.length === 0
+              }
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Update Notification
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

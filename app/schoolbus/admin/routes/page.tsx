@@ -6,9 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, MapPin, Clock, Users, DollarSign } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEffect, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Route {
   id: string
@@ -19,13 +26,13 @@ interface Route {
   students: number
   baseFee: string
   status: "active" | "inactive"
-  busStops: BusStop[]
 }
 
 interface BusStop {
   id: string
   name: string
-  route: string
+  routeId: string
+  routeName: string
   students: number
   fee: string
   pickupTime: string
@@ -37,14 +44,114 @@ export default function RoutesPage() {
   const [stops, setStops] = useState<BusStop[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null)
+  const [routeStops, setRouteStops] = useState<BusStop[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   useEffect(() => {
-    // Load data from localStorage
+    // Load mock data if no data exists in localStorage
     const savedRoutes = localStorage.getItem('routes')
     const savedStops = localStorage.getItem('stops')
 
-    if (savedRoutes) setRoutes(JSON.parse(savedRoutes))
-    if (savedStops) setStops(JSON.parse(savedStops))
+    if (savedRoutes) {
+      setRoutes(JSON.parse(savedRoutes))
+    } else {
+      // Create mock routes data if none exists
+      const mockRoutes: Route[] = [
+        {
+          id: "1",
+          name: "North Route",
+          description: "Serves the northern areas of the city",
+          stops: 8,
+          buses: 2,
+          students: 45,
+          baseFee: "$50",
+          status: "active"
+        },
+        {
+          id: "2",
+          name: "South Route",
+          description: "Serves the southern suburbs",
+          stops: 6,
+          buses: 1,
+          students: 32,
+          baseFee: "$45",
+          status: "active"
+        },
+        {
+          id: "3",
+          name: "East Route",
+          description: "Covers eastern neighborhoods",
+          stops: 7,
+          buses: 2,
+          students: 38,
+          baseFee: "$55",
+          status: "inactive"
+        }
+      ]
+      setRoutes(mockRoutes)
+      localStorage.setItem('routes', JSON.stringify(mockRoutes))
+    }
+
+    if (savedStops) {
+      setStops(JSON.parse(savedStops))
+    } else {
+      // Create mock stops data if none exists
+      const mockStops: BusStop[] = [
+        {
+          id: "1",
+          name: "Oak Street",
+          routeId: "1",
+          routeName: "North Route",
+          students: 12,
+          fee: "$50",
+          pickupTime: "7:15 AM",
+          dropoffTime: "3:45 PM"
+        },
+        {
+          id: "2",
+          name: "Maple Avenue",
+          routeId: "1",
+          routeName: "North Route",
+          students: 8,
+          fee: "$50",
+          pickupTime: "7:30 AM",
+          dropoffTime: "4:00 PM"
+        },
+        {
+          id: "3",
+          name: "Pine Road",
+          routeId: "2",
+          routeName: "South Route",
+          students: 15,
+          fee: "$45",
+          pickupTime: "7:00 AM",
+          dropoffTime: "3:30 PM"
+        },
+        {
+          id: "4",
+          name: "Cedar Lane",
+          routeId: "2",
+          routeName: "South Route",
+          students: 10,
+          fee: "$45",
+          pickupTime: "7:20 AM",
+          dropoffTime: "3:50 PM"
+        },
+        {
+          id: "5",
+          name: "Elm Boulevard",
+          routeId: "3",
+          routeName: "East Route",
+          students: 20,
+          fee: "$55",
+          pickupTime: "6:45 AM",
+          dropoffTime: "3:15 PM"
+        }
+      ]
+      setStops(mockStops)
+      localStorage.setItem('stops', JSON.stringify(mockStops))
+    }
 
     setIsLoading(false)
   }, [])
@@ -56,15 +163,23 @@ export default function RoutesPage() {
 
   const filteredStops = stops.filter(stop => 
     stop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    stop.route.toLowerCase().includes(searchTerm.toLowerCase())
+    stop.routeName.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const handleViewRoute = (route: Route) => {
+    setSelectedRoute(route)
+    // Filter stops for this specific route
+    const stopsForRoute = stops.filter(stop => stop.routeId === route.id)
+    setRouteStops(stopsForRoute)
+    setIsDialogOpen(true)
+  }
+
   if (isLoading) {
-    return <div>Loading...</div>
+    return <div className="flex items-center justify-center h-64">Loading...</div>
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Routes & Stops</h1>
         <p className="text-muted-foreground">Manage your bus routes and stops</p>
@@ -87,12 +202,20 @@ export default function RoutesPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Link href="/schoolbus/admin/routes/new" className="w-full sm:w-auto">
-              <Button className="w-full">
-                <Plus className="mr-2 h-4 w-4" />
-                Add New
-              </Button>
-            </Link>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Link href="/schoolbus/admin/routes/new" className="w-full sm:w-auto">
+                <Button className="w-full">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Route
+                </Button>
+              </Link>
+              <Link href="/schoolbus/admin/stops/new" className="w-full sm:w-auto">
+                <Button className="w-full" variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Stop
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -125,14 +248,22 @@ export default function RoutesPage() {
                         <TableCell>{route.students}</TableCell>
                         <TableCell>{route.baseFee}</TableCell>
                         <TableCell>
-                          <Badge variant={route.status === "active" ? "default" : "outline"}>
+                          <Badge variant={route.status === "active" ? "default" : "secondary"}>
                             {route.status.charAt(0).toUpperCase() + route.status.slice(1)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewRoute(route)}
+                            className="mr-2"
+                          >
+                            View
+                          </Button>
                           <Link href={`/schoolbus/admin/routes/${route.id}`}>
                             <Button variant="ghost" size="sm">
-                              View
+                              Edit
                             </Button>
                           </Link>
                         </TableCell>
@@ -174,14 +305,14 @@ export default function RoutesPage() {
                     filteredStops.map((stop) => (
                       <TableRow key={stop.id}>
                         <TableCell className="font-medium">{stop.name}</TableCell>
-                        <TableCell>{stop.route}</TableCell>
+                        <TableCell>{stop.routeName}</TableCell>
                         <TableCell>{stop.students}</TableCell>
                         <TableCell>{stop.fee}</TableCell>
                         <TableCell>{stop.pickupTime}</TableCell>
                         <TableCell className="text-right">
                           <Link href={`/schoolbus/admin/stops/${stop.id}`}>
                             <Button variant="ghost" size="sm">
-                              View
+                              Edit
                             </Button>
                           </Link>
                         </TableCell>
@@ -200,6 +331,104 @@ export default function RoutesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Route Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          {selectedRoute && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  {selectedRoute.name}
+                </DialogTitle>
+                <DialogDescription>{selectedRoute.description}</DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Stops</p>
+                    <p className="text-2xl font-bold">{selectedRoute.stops}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Students</p>
+                    <p className="text-2xl font-bold">{selectedRoute.students}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Base Fee</p>
+                    <p className="text-2xl font-bold">{selectedRoute.baseFee}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Buses</p>
+                    <p className="text-2xl font-bold">{selectedRoute.buses}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <h3 className="font-semibold mb-2">Bus Stops</h3>
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Stop Name</TableHead>
+                        <TableHead>Students</TableHead>
+                        <TableHead>Fee</TableHead>
+                        <TableHead>Pickup Time</TableHead>
+                        <TableHead>Dropoff Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {routeStops.length > 0 ? (
+                        routeStops.map((stop) => (
+                          <TableRow key={stop.id}>
+                            <TableCell className="font-medium">{stop.name}</TableCell>
+                            <TableCell>{stop.students}</TableCell>
+                            <TableCell>{stop.fee}</TableCell>
+                            <TableCell>{stop.pickupTime}</TableCell>
+                            <TableCell>{stop.dropoffTime}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-4">
+                            No stops found for this route
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              
+              <div className="flex justify-end mt-4 gap-2">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button asChild>
+                  <Link href={`/schoolbus/admin/routes/${selectedRoute.id}`}>
+                    Edit Route
+                  </Link>
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
