@@ -57,7 +57,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "date-fns": "latest",
-    "edemicformbuilder": "^1.3.0",
+    "edemicformbuilder": "^1.4.0",
     "embla-carousel-react": "8.5.1",
     "html2pdf.js": "latest",
     "input-otp": "1.4.1",
